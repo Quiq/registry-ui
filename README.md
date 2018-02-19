@@ -63,3 +63,9 @@ You can try to run in dry-run mode first to see what is going to be purged:
 ### Debug mode
 
 To increase http request verbosity, run container with `-e GOREQUEST_DEBUG=1`.
+
+### Screenshots
+
+![image](screenshots/1.png)
+
+![image](screenshots/2.png)
