@@ -1,0 +1,3 @@
+config-dev.yml
+data/registry_events.db
+vendor/

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Docker Registry UI</title>
+        <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/r/bs-3.3.5/jq-2.1.4,dt-1.10.8/datatables.min.css" />
+        <script type="text/javascript" src="https://cdn.datatables.net/r/bs-3.3.5/jqc-1.11.3,dt-1.10.8/datatables.min.js"></script>
+        {{yield head()}}
+    </head>
+    <body>
+        <div class="container">
+            <div style="float: left">
+                <h2>Docker Registry UI</h2>
+            </div>
+            <div style="float: right">
+                <a href="/events">Event Log</a>
+            </div>
+            <div style="clear: both"></div>
+
+            {{yield body()}}
+
+            <div style="padding: 10px 0; margin-bottom: 20px">
+                <div style="float: left">
+                    &copy; 2017-2018 <a href="https://goquiq.com">Quiq Inc.</a>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

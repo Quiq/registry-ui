@@ -1,0 +1,76 @@
+hash: 29246065eafa5aaec8848881fb6c99995e91a3f9b0082724db71c71590937e29
+updated: 2018-02-19T16:47:40.847725+02:00
+imports:
+- name: github.com/CloudyKit/fastprinter
+  version: 74b38d55f37af5d6c05ca11147d616b613a3420e
+- name: github.com/CloudyKit/jet
+  version: 2b064536b25ab0e9c54245f9e2cc5bd4766033fe
+- name: github.com/dgrijalva/jwt-go
+  version: a539ee1a749a2b895533f979515ac7e6e0f5b650
+- name: github.com/grafana/grafana
+  version: c4683f1ae85a9c80dfd04fce09318c466885f3c0
+  subpackages:
+  - pkg/cmd/grafana-cli/logger
+- name: github.com/hhkbp2/go-logging
+  version: 1bf77adfece4a2018ac4bcc84e1f20509157a534
+- name: github.com/hhkbp2/go-strftime
+  version: d82166ec6782f870431668391c2e321069632fe7
+- name: github.com/labstack/echo
+  version: b338075a0fc6e1a0683dbf03d09b4957a289e26f
+  subpackages:
+  - middleware
+- name: github.com/labstack/gommon
+  version: 779b8a8b9850a97acba6a3fe20feb628c39e17c1
+  subpackages:
+  - bytes
+  - color
+  - log
+  - random
+- name: github.com/mattn/go-colorable
+  version: 3fa8c76f9daed4067e4a806fb7e4dc86455c6d6a
+- name: github.com/mattn/go-isatty
+  version: fc9e8d8ef48496124e79ae0df75490096eccf6fe
+- name: github.com/mattn/go-sqlite3
+  version: 6c771bb9887719704b210e87e934f08be014bdb1
+- name: github.com/moul/http2curl
+  version: 4e24498b31dba4683efb9d35c1c8a91e2eda28c8
+- name: github.com/parnurzeal/gorequest
+  version: a578a48e8d6ca8b01a3b18314c43c6716bb5f5a3
+- name: github.com/pkg/errors
+  version: c605e284fe17294bda444b34710735b29d1a9d90
+- name: github.com/tidwall/gjson
+  version: 87033efcaec6215741137e8ca61952c53ef2685d
+- name: github.com/tidwall/match
+  version: 173748da739a410c5b0b813b956f89ff94730b4c
+- name: github.com/valyala/bytebufferpool
+  version: e746df99fe4a3986f4d4f79e13c1e0117ce9c2f7
+- name: github.com/valyala/fasttemplate
+  version: dcecefd839c4193db0d35b88ec65b4c12d360ab0
+- name: golang.org/x/crypto
+  version: 4d70248d17d12d1edb7153434a74001c1540938b
+  subpackages:
+  - acme
+  - acme/autocert
+- name: golang.org/x/net
+  version: 02ac38e2528ff4adea90f184d71a3faa04b4b1b0
+  subpackages:
+  - publicsuffix
+- name: golang.org/x/sys
+  version: cd2c276457edda6df7fb04895d3fd6a6add42926
+  subpackages:
+  - unix
+- name: gopkg.in/yaml.v2
+  version: 3b4ad1db5b2a649883ff3782f5f9f6fb52be71af
+testImports:
+- name: github.com/jtolds/gls
+  version: 9a4a02dbe491bef4bab3c24fd9f3087d6c4c6690
+- name: github.com/smartystreets/assertions
+  version: 01fedaa993c0a9f9aa55111501cd7c81a49e812e
+  subpackages:
+  - internal/oglematchers
+- name: github.com/smartystreets/goconvey
+  version: d4c757aa9afd1e2fc1832aaab209b5794eb336e1
+  subpackages:
+  - convey
+  - convey/gotest
+  - convey/reporting

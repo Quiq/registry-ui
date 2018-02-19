@@ -1,0 +1,52 @@
+{{extends "base.html"}}
+
+{{block head()}}
+<script type="text/javascript" src="/static/bootstrap-confirmation.min.js"></script>
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#datatable').DataTable({
+            "pageLength": 10,
+            "order": [[ 0, 'desc' ]],
+            "stateSave": true
+        })
+        function populateConfirmation()  {
+            $('[data-toggle=confirmation]').confirmation({
+                rootSelector: '[data-toggle=confirmation]',
+                container: 'body'
+            });
+        }
+        populateConfirmation()
+        $('#datatable').on('draw.dt', populateConfirmation)
+    });
+</script>
+{{end}}
+
+{{block body()}}
+<ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    {{if namespace != "library"}}
+    <li><a href="/{{ namespace }}">{{ namespace }}</a></li>
+    {{end}}
+    <li class="active">{{ repo }}</li>
+</ol>
+
+<table id="datatable" class="table table-striped table-bordered">
+    <thead bgcolor="#ddd">
+        <tr>
+            <th>Tag Name</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{range tag := tags}}
+        <tr>
+            <td>
+                <a href="/{{ namespace }}/{{ repo }}/{{ tag }}">{{ tag }}</a>
+                {{if deleteAllowed}}
+                <a href="/{{ namespace }}/{{ repo }}/{{ tag }}/delete" data-toggle="confirmation" class="btn btn-danger btn-xs pull-right" role="button">Delete</a>
+                {{end}}
+            </td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+{{end}}

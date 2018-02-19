@@ -1,0 +1,47 @@
+{{extends "base.html"}}
+
+{{block head()}}
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#datatable').DataTable({
+            "pageLength": 10,
+            "order": [[ 4, 'desc' ]],
+            "stateSave": true
+        });
+    });
+</script>
+{{end}}
+
+{{block body()}}
+<ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li class="active">Event Log</li>
+</ol>
+
+<table id="datatable" class="table table-striped table-bordered">
+    <thead bgcolor="#ddd">
+        <tr>
+            <th>Action</th>
+            <th>Image</th>
+            <th>IP Address</th>
+            <th>User</th>
+            <th>Time</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{range e := events}}
+            <tr>
+                <td>{{ e.Action }}</td>
+                {{if hasPrefix(e.Tag,"sha256") }}
+                <td>{{ e.Repository }}@{{ e.Tag[:12] }}.....{{ e.Tag[66:] }}</td>
+                {{else}}
+                <td>{{ e.Repository }}:{{ e.Tag }}</td>
+                {{end}}
+                <td>{{ e.IP }}</td>
+                <td>{{ e.User }}</td>
+                <td>{{ e.Created }}</td>
+            </tr>
+        {{end}}
+    </tbody>
+</table>
+{{end}}

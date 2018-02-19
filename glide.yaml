@@ -1,0 +1,20 @@
+package: github.com/quiq/docker-registry-ui
+import:
+- package: github.com/CloudyKit/jet
+  version: v2.1.2
+- package: github.com/labstack/echo
+  version: v3.2.6
+  subpackages:
+  - middleware
+- package: github.com/parnurzeal/gorequest
+  version: v0.2.15
+- package: github.com/hhkbp2/go-logging
+- package: github.com/tidwall/gjson
+  version: v1.0.6
+- package: github.com/mattn/go-sqlite3
+  version: 1.6.0
+testImport:
+- package: github.com/smartystreets/goconvey
+  version: 1.6.2
+  subpackages:
+  - convey
