@@ -1,5 +1,7 @@
 ## Docker Registry UI
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/quiq/docker-registry-ui)](https://goreportcard.com/report/github.com/quiq/docker-registry-ui)
+
 ### Overview
 
 * Web UI for Docker Registry 2.6+
@@ -13,6 +15,8 @@
 
 No TLS or authentication implemented on the UI web server itself.
 Assuming you will proxy it behind nginx, oauth2_proxy or something.
+
+Docker images [quiq/docker-registry-ui](https://hub.docker.com/r/quiq/docker-registry-ui/tags/)
 
 ### Configuration
 
