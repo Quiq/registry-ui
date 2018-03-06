@@ -1,4 +1,4 @@
-FROM golang:1.9.4-alpine3.7 as builder
+FROM golang:1.10.0-alpine3.7 as builder
 
 ENV GOPATH /opt
 
