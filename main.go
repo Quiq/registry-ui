@@ -185,6 +185,7 @@ func (a *apiClient) viewTags(c echo.Context) error {
 	data.Set("repo", repo)
 	data.Set("tags", tags)
 	data.Set("deleteAllowed", deleteAllowed)
+	data.Set("events", registry.GetEvents(repo))
 
 	return c.Render(http.StatusOK, "tags.html", data)
 }
@@ -279,9 +280,8 @@ func (a *apiClient) checkDeletePermission(user string) bool {
 
 // viewLog view events from sqlite.
 func (a *apiClient) viewLog(c echo.Context) error {
-	events := registry.GetEvents()
 	data := jet.VarMap{}
-	data.Set("events", events)
+	data.Set("events", registry.GetEvents(""))
 
 	return c.Render(http.StatusOK, "event_log.html", data)
 }

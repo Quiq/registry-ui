@@ -2,12 +2,16 @@
 
 {{block head()}}
 <script type="text/javascript" src="/static/bootstrap-confirmation.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/plug-ins/1.10.16/sorting/natural.js"></script>
 <script type="text/javascript">
     $(document).ready(function() {
         $('#datatable').DataTable({
             "pageLength": 10,
             "order": [[ 0, 'desc' ]],
-            "stateSave": true
+            "stateSave": true,
+            columnDefs: [
+              { type: 'natural', targets: 0 }
+            ]
         })
         function populateConfirmation()  {
             $('[data-toggle=confirmation]').confirmation({
@@ -17,6 +21,8 @@
         }
         populateConfirmation()
         $('#datatable').on('draw.dt', populateConfirmation)
+
+
     });
 </script>
 {{end}}
@@ -49,4 +55,33 @@
         {{end}}
     </tbody>
 </table>
+
+<h4>Latest events on this repo</h4>
+<table id="datatable_log" class="table table-striped table-bordered">
+    <thead bgcolor="#ddd">
+        <tr>
+            <th>Action</th>
+            <th>Image</th>
+            <th>IP Address</th>
+            <th>User</th>
+            <th>Time</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{range e := events}}
+            <tr>
+                <td>{{ e.Action }}</td>
+                {{if hasPrefix(e.Tag,"sha256") }}
+                <td title="{{ e.Tag }}">{{ e.Repository }}@{{ e.Tag[:19] }}...</td>
+                {{else}}
+                <td>{{ e.Repository }}:{{ e.Tag }}</td>
+                {{end}}
+                <td>{{ e.IP }}</td>
+                <td>{{ e.User }}</td>
+                <td>{{ e.Created }}</td>
+            </tr>
+        {{end}}
+    </tbody>
+</table>
+
 {{end}}

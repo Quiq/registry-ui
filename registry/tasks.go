@@ -64,7 +64,7 @@ func PurgeOldTags(client *Client, purgeDryRun bool, purgeTagsKeepDays, purgeTags
 			for _, tag := range tags {
 				_, infoV1, _ := client.TagInfo(repo, tag, true)
 				if infoV1 == "" {
-					logger.Errorf("[%s] manifest missed for tag %s", repo, tag)
+					logger.Errorf("[%s] missing manifest v1 for tag %s", repo, tag)
 					continue
 				}
 				created := gjson.Get(gjson.Get(infoV1, "history.0.v1Compatibility").String(), "created").Time()

@@ -33,7 +33,7 @@
             <tr>
                 <td>{{ e.Action }}</td>
                 {{if hasPrefix(e.Tag,"sha256") }}
-                <td>{{ e.Repository }}@{{ e.Tag[:12] }}.....{{ e.Tag[66:] }}</td>
+                <td title="{{ e.Tag }}">{{ e.Repository }}@{{ e.Tag[:19] }}...</td>
                 {{else}}
                 <td>{{ e.Repository }}:{{ e.Tag }}</td>
                 {{end}}

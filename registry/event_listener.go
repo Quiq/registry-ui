@@ -103,7 +103,7 @@ func ProcessEvents(request *http.Request, retention int) {
 }
 
 // GetEvents retrieve events from sqlite db
-func GetEvents() []EventRow {
+func GetEvents(repository string) []EventRow {
 	var events []EventRow
 	db, err := sql.Open("sqlite3", dbFile)
 	if err != nil {
@@ -112,7 +112,11 @@ func GetEvents() []EventRow {
 	}
 	defer db.Close()
 
-	rows, err := db.Query("SELECT * FROM events ORDER BY id DESC LIMIT 1000")
+	query := "SELECT * FROM events ORDER BY id DESC LIMIT 1000"
+	if repository != "" {
+		query = fmt.Sprintf("SELECT * FROM events WHERE repository='%s' ORDER BY id DESC LIMIT 5", repository)
+	}
+	rows, err := db.Query(query)
 	if err != nil {
 		logger.Error("Error selecting from table: ", err)
 		return events
