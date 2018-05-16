@@ -24,7 +24,7 @@ The configuration is stored in `config.yml` and the options are self-descriptive
 
 ### Run UI
 
-    docker run -d -p 8000:8000 --read-only -v /local/config.yml:/opt/config.yml:ro \
+    docker run -d -p 8000:8000 -v /local/config.yml:/opt/config.yml:ro \
         --name=registry-ui quiq/docker-registry-ui
 
 To run with your own root CA certificate, add to the command:
@@ -34,6 +34,9 @@ To run with your own root CA certificate, add to the command:
 To preserve sqlite db file with event notifications data, add to the command:
 
     -v /local/data:/opt/data
+
+You can also run the container with `--read-only` option, however when using using event listener functionality
+you need to ensure the sqlite db can be written, i.e. mount a folder as listed above.
 
 ## Configure event listener on Docker Registry
 
