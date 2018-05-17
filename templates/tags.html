@@ -40,6 +40,7 @@
     <thead bgcolor="#ddd">
         <tr>
             <th>Tag Name</th>
+            <th>Tag creation date</th>
         </tr>
     </thead>
     <tbody>
@@ -50,6 +51,13 @@
                 {{if deleteAllowed}}
                 <a href="/{{ namespace }}/{{ repo }}/{{ tag }}/delete" data-toggle="confirmation" class="btn btn-danger btn-xs pull-right" role="button">Delete</a>
                 {{end}}
+            </td>
+            <td>
+              {{ if tagCreated[tag] }}
+                {{ tagCreated[tag]|pretty_time }}
+              {{ else }}
+                ...working...
+              {{ end }}
             </td>
         </tr>
         {{end}}

@@ -214,6 +214,12 @@ func (c *Client) TagInfo(repo, tag string, v1only bool) (rsha256, rinfoV1, rinfo
 	return sha256, infoV1, infoV2
 }
 
+// TagInfoCreated get image creation date for the repo tag.
+func (c *Client) TagInfoCreated(repo, tag string) (rcreated string) {
+	_, infoV1, _ := c.TagInfo(repo, tag, false)
+	return gjson.Get(gjson.Get(infoV1, "history.0.v1Compatibility").String(), "created").String()
+}
+
 // TagCounts return map with tag counts.
 func (c *Client) TagCounts() map[string]int {
 	return c.tagCounts
