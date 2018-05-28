@@ -10,6 +10,7 @@ ADD glide.* /opt/src/github.com/quiq/docker-registry-ui/
 RUN cd /opt/src/github.com/quiq/docker-registry-ui && \
     /opt/bin/glide install
 
+ADD events /opt/src/github.com/quiq/docker-registry-ui/events
 ADD registry /opt/src/github.com/quiq/docker-registry-ui/registry
 ADD main.go /opt/src/github.com/quiq/docker-registry-ui/
 RUN cd /opt/src/github.com/quiq/docker-registry-ui && \

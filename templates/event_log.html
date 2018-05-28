@@ -39,7 +39,7 @@
                 {{end}}
                 <td>{{ e.IP }}</td>
                 <td>{{ e.User }}</td>
-                <td>{{ e.Created }}</td>
+                <td>{{ e.Created|pretty_time }}</td>
             </tr>
         {{end}}
     </tbody>

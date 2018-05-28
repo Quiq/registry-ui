@@ -34,7 +34,7 @@ func (p timeSlice) Swap(i, j int) {
 
 // PurgeOldTags purge old tags.
 func PurgeOldTags(client *Client, purgeDryRun bool, purgeTagsKeepDays, purgeTagsKeepCount int) {
-	logger := setupLogging("registry.tasks.PurgeOldTags")
+	logger := SetupLogging("registry.tasks.PurgeOldTags")
 	// Reduce client logging.
 	client.logger.SetLevel(logging.LevelError)
 

@@ -38,7 +38,7 @@ func NewClient(url string, verifyTLS bool, username, password string) *Client {
 		password:  password,
 
 		request:   gorequest.New().TLSClientConfig(&tls.Config{InsecureSkipVerify: !verifyTLS}),
-		logger:    setupLogging("registry.client"),
+		logger:    SetupLogging("registry.client"),
 		tokens:    map[string]string{},
 		repos:     map[string][]string{},
 		tagCounts: map[string]int{},

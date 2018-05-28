@@ -1,5 +1,5 @@
-hash: 35e7a8422393703991e14940d1fa372418c561f5dd5200a2a5a4d7e09813eeee
-updated: 2018-05-28T11:05:19.474208+03:00
+hash: d156899e94e2d0d92ed200d5729bec5d0d205b5b98bbf2bd89f7f91c9ed7a518
+updated: 2018-05-28T13:28:11.313447+03:00
 imports:
 - name: github.com/CloudyKit/fastprinter
   version: 74b38d55f37af5d6c05ca11147d616b613a3420e
@@ -7,10 +7,8 @@ imports:
   version: 2b064536b25ab0e9c54245f9e2cc5bd4766033fe
 - name: github.com/dgrijalva/jwt-go
   version: 06ea1031745cb8b3dab3f6a236daf2b0aa468b7e
-- name: github.com/grafana/grafana
-  version: 238139fad67d0d6e7f5e54d515568f2ab789a26e
-  subpackages:
-  - pkg/cmd/grafana-cli/logger
+- name: github.com/go-sql-driver/mysql
+  version: 64db0f7ebe171b596aa9b26f39a79f7413a3b617
 - name: github.com/hhkbp2/go-logging
   version: 377ba05d98977baa2a0d9e13f13aac2f3a47ac4d
 - name: github.com/hhkbp2/go-strftime
@@ -59,6 +57,10 @@ imports:
   version: 7c87d13f8e835d2fb3a70a2912c811ed0c1d241b
   subpackages:
   - unix
+- name: google.golang.org/appengine
+  version: b1f26356af11148e710935ed1ac8a7f5702c7612
+  subpackages:
+  - cloudsql
 - name: gopkg.in/yaml.v2
   version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
 testImports:

@@ -11,6 +11,7 @@
 * Automatically discover an authentication method (basic auth, token service etc.)
 * Caching the list of repositories, tag counts and refreshing in background
 * Event listener of notification events coming from Registry
+* Store events in sqlite or MySQL database
 * CLI option to maintain the tags retention: purge tags older than X days keeping at least Y tags
 
 No TLS or authentication implemented on the UI web server itself.
@@ -55,6 +56,23 @@ To receive events you need to configure Registry as follow:
             - application/octet-stream
 
 Adjust url and token as appropriate.
+
+## Using MySQL instead of sqlite3 for event listener
+
+To use MySQL as a storage you need to change `event_database_driver` and `event_database_location`
+settings in the config file. It is expected you create a database mentioned in the location DSN.
+Minimal privileges are `SELECT`, `INSERT`, `DELETE`.
+You can create a table manually if you don't want to grant `CREATE` permission:
+
+	CREATE TABLE events (
+		id INTEGER PRIMARY KEY AUTO_INCREMENT,
+		action CHAR(4) NULL,
+		repository VARCHAR(100) NULL,
+		tag VARCHAR(100) NULL,
+		ip VARCHAR(15) NULL,
+		user VARCHAR(50) NULL,
+		created DATETIME NULL
+	);
 
 ### Schedule a cron task for purging tags
 

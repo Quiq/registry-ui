@@ -8,8 +8,8 @@ import (
 	"github.com/hhkbp2/go-logging"
 )
 
-// setupLogging configure logging.
-func setupLogging(name string) logging.Logger {
+// SetupLogging configure logging.
+func SetupLogging(name string) logging.Logger {
 	logger := logging.GetLogger(name)
 	handler := logging.NewStdoutHandler()
 	format := "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

@@ -19,6 +19,12 @@ event_listener_token: token
 # Retention of records to keep.
 event_retention_days: 7
 
+# Event listener storage.
+event_database_driver: sqlite3
+event_database_location: data/registry_events.db
+# event_database_driver: mysql
+# event_database_location: user:password@tcp(localhost:3306)/docker_events
+
 # Cache refresh interval in minutes.
 # How long to cache repository list and tag counts.
 cache_refresh_interval: 10

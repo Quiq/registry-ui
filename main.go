@@ -13,25 +13,28 @@ import (
 	"github.com/CloudyKit/jet"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
+	"github.com/quiq/docker-registry-ui/events"
 	"github.com/quiq/docker-registry-ui/registry"
 	"github.com/tidwall/gjson"
 	"gopkg.in/yaml.v2"
 )
 
 type configData struct {
-	ListenAddr           string   `yaml:"listen_addr"`
-	RegistryURL          string   `yaml:"registry_url"`
-	VerifyTLS            bool     `yaml:"verify_tls"`
-	Username             string   `yaml:"registry_username"`
-	Password             string   `yaml:"registry_password"`
-	EventListenerToken   string   `yaml:"event_listener_token"`
-	EventRetentionDays   int      `yaml:"event_retention_days"`
-	CacheRefreshInterval uint8    `yaml:"cache_refresh_interval"`
-	AnyoneCanDelete      bool     `yaml:"anyone_can_delete"`
-	Admins               []string `yaml:"admins"`
-	Debug                bool     `yaml:"debug"`
-	PurgeTagsKeepDays    int      `yaml:"purge_tags_keep_days"`
-	PurgeTagsKeepCount   int      `yaml:"purge_tags_keep_count"`
+	ListenAddr            string   `yaml:"listen_addr"`
+	RegistryURL           string   `yaml:"registry_url"`
+	VerifyTLS             bool     `yaml:"verify_tls"`
+	Username              string   `yaml:"registry_username"`
+	Password              string   `yaml:"registry_password"`
+	EventListenerToken    string   `yaml:"event_listener_token"`
+	EventRetentionDays    int      `yaml:"event_retention_days"`
+	EventDatabaseDriver   string   `yaml:"event_database_driver"`
+	EventDatabaseLocation string   `yaml:"event_database_location"`
+	CacheRefreshInterval  uint8    `yaml:"cache_refresh_interval"`
+	AnyoneCanDelete       bool     `yaml:"anyone_can_delete"`
+	Admins                []string `yaml:"admins"`
+	Debug                 bool     `yaml:"debug"`
+	PurgeTagsKeepDays     int      `yaml:"purge_tags_keep_days"`
+	PurgeTagsKeepCount    int      `yaml:"purge_tags_keep_count"`
 }
 
 type template struct {
@@ -39,8 +42,9 @@ type template struct {
 }
 
 type apiClient struct {
-	client *registry.Client
-	config configData
+	client        *registry.Client
+	eventListener *events.EventListener
+	config        configData
 }
 
 func main() {
@@ -87,6 +91,11 @@ func main() {
 	// Count tags in background.
 	go a.client.CountTags(a.config.CacheRefreshInterval)
 
+	if a.config.EventDatabaseDriver != "sqlite3" && a.config.EventDatabaseDriver != "mysql" {
+		panic(fmt.Errorf("event_database_driver should be either sqlite3 or mysql"))
+	}
+	a.eventListener = events.NewEventListener(a.config.EventDatabaseDriver, a.config.EventDatabaseLocation, a.config.EventRetentionDays)
+
 	// Template engine init.
 	view := jet.NewHTMLSet("templates")
 	view.SetDevelopmentMode(a.config.Debug)
@@ -102,7 +111,9 @@ func main() {
 		return registry.PrettySize(value)
 	})
 	view.AddGlobal("pretty_time", func(datetime interface{}) string {
-		return strings.Split(strings.Replace(datetime.(string), "T", " ", 1), ".")[0]
+		d := strings.Replace(datetime.(string), "T", " ", 1)
+		d = strings.Replace(d, "Z", "", 1)
+		return strings.Split(d, ".")[0]
 	})
 	view.AddGlobal("parse_map", func(m interface{}) string {
 		var res string
@@ -130,7 +141,7 @@ func main() {
 			return token == a.config.EventListenerToken, nil
 		}),
 	}))
-	p.POST("/events", a.eventListener)
+	p.POST("/events", a.receiveEvents)
 
 	e.Logger.Fatal(e.Start(a.config.ListenAddr))
 }
@@ -185,7 +196,7 @@ func (a *apiClient) viewTags(c echo.Context) error {
 	data.Set("repo", repo)
 	data.Set("tags", tags)
 	data.Set("deleteAllowed", deleteAllowed)
-	data.Set("events", registry.GetEvents(repo))
+	data.Set("events", a.eventListener.GetEvents(repo))
 
 	return c.Render(http.StatusOK, "tags.html", data)
 }
@@ -281,13 +292,13 @@ func (a *apiClient) checkDeletePermission(user string) bool {
 // viewLog view events from sqlite.
 func (a *apiClient) viewLog(c echo.Context) error {
 	data := jet.VarMap{}
-	data.Set("events", registry.GetEvents(""))
+	data.Set("events", a.eventListener.GetEvents(""))
 
 	return c.Render(http.StatusOK, "event_log.html", data)
 }
 
-// eventListener listen events from registry.
-func (a *apiClient) eventListener(c echo.Context) error {
-	registry.ProcessEvents(c.Request(), a.config.EventRetentionDays)
+// receiveEvents receive events.
+func (a *apiClient) receiveEvents(c echo.Context) error {
+	a.eventListener.ProcessEvents(c.Request())
 	return c.String(http.StatusOK, "OK")
 }
