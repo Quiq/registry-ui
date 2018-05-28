@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -56,16 +57,10 @@ func ProcessEvents(request *http.Request, retention int) {
 	logger.Debugf("Received event: %+v", t)
 	j, _ := json.Marshal(t)
 
-	db, err := sql.Open("sqlite3", dbFile)
-	if err != nil {
-		logger.Error("Error opening sqlite db: ", err)
-		return
-	}
+	db, err := getDababaseHandler()
 	defer db.Close()
-
-	_, err = db.Exec(schema)
 	if err != nil {
-		logger.Error("Error creating a table: ", err)
+		logger.Error(err)
 		return
 	}
 
@@ -105,12 +100,13 @@ func ProcessEvents(request *http.Request, retention int) {
 // GetEvents retrieve events from sqlite db
 func GetEvents(repository string) []EventRow {
 	var events []EventRow
-	db, err := sql.Open("sqlite3", dbFile)
+
+	db, err := getDababaseHandler()
+	defer db.Close()
 	if err != nil {
-		logger.Error("Error opening sqlite db: ", err)
+		logger.Error(err)
 		return events
 	}
-	defer db.Close()
 
 	query := "SELECT * FROM events ORDER BY id DESC LIMIT 1000"
 	if repository != "" {
@@ -129,4 +125,25 @@ func GetEvents(repository string) []EventRow {
 	}
 	rows.Close()
 	return events
+}
+
+func getDababaseHandler() (*sql.DB, error) {
+	firstRun := false
+	if _, err := os.Stat(dbFile); os.IsNotExist(err) {
+		firstRun = true
+	}
+
+	// Open db file and create if needed.
+	db, err := sql.Open("sqlite3", dbFile)
+	if err != nil {
+		return nil, fmt.Errorf("Error opening sqlite db: %s", err)
+	}
+
+	// Create table on first run.
+	if firstRun {
+		if _, err = db.Exec(schema); err != nil {
+			return nil, fmt.Errorf("Error creating a table: %s", err)
+		}
+	}
+	return db, nil
 }
