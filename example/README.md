@@ -9,8 +9,8 @@ $ docker-compose up -d
 As an example, push the docker-registry-ui image to the local Docker Registry.
 
 ```bash
-$ docker tag quiq/docker-registry-ui localhost:5000/quiq/docker-registry-ui
-$ docker push localhost:5000/quiq/docker-registry-ui
+$ docker tag quiq/docker-registry-ui localhost/quiq/docker-registry-ui
+$ docker push localhost/quiq/docker-registry-ui
 The push refers to repository [localhost:5000/quiq/docker-registry-ui]
 ab414a599bf8: Pushed
 a8da33adf86e: Pushed
@@ -22,4 +22,4 @@ latest: digest: sha256:d88c1ca40986a358e59795992e87e364a0b3b97833aade5abcd79dda0
 ```
 
 Then you will find the pushed repository 'quiq/docker-registry-ui' in the following URL.
-http://localhost:8000/quiq/docker-registry-ui
+http://localhost/ui/quiq/docker-registry-ui

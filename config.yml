@@ -1,5 +1,7 @@
 # Listen interface.
 listen_addr: 0.0.0.0:8000
+# Base path of Docker Registry UI.
+base_path: /
 
 # Registry URL with schema and port.
 registry_url: https://docker-registry.local
