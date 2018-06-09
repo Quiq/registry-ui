@@ -15,6 +15,7 @@ import (
 	"github.com/labstack/echo/middleware"
 	"github.com/quiq/docker-registry-ui/events"
 	"github.com/quiq/docker-registry-ui/registry"
+	"github.com/robfig/cron"
 	"github.com/tidwall/gjson"
 	"gopkg.in/yaml.v2"
 )
@@ -35,6 +36,7 @@ type configData struct {
 	Debug                 bool     `yaml:"debug"`
 	PurgeTagsKeepDays     int      `yaml:"purge_tags_keep_days"`
 	PurgeTagsKeepCount    int      `yaml:"purge_tags_keep_count"`
+	PurgeTagsSchedule     string   `yaml:"purge_tags_schedule"`
 }
 
 type template struct {
@@ -84,8 +86,19 @@ func main() {
 
 	// Execute CLI task and exit.
 	if purgeTags {
-		registry.PurgeOldTags(a.client, purgeDryRun, a.config.PurgeTagsKeepDays, a.config.PurgeTagsKeepCount)
+		a.purgeOldTags(purgeDryRun)
 		return
+	}
+	// Schedules to purge tags.
+	if a.config.PurgeTagsSchedule != "" {
+		c := cron.New()
+		task := func() {
+			a.purgeOldTags(purgeDryRun)
+		}
+		if err := c.AddFunc(a.config.PurgeTagsSchedule, task); err != nil {
+			panic(fmt.Errorf("Invalid schedule format: %s", a.config.PurgeTagsSchedule))
+		}
+		c.Start()
 	}
 
 	// Count tags in background.
@@ -301,4 +314,9 @@ func (a *apiClient) viewLog(c echo.Context) error {
 func (a *apiClient) receiveEvents(c echo.Context) error {
 	a.eventListener.ProcessEvents(c.Request())
 	return c.String(http.StatusOK, "OK")
+}
+
+// purgeOldTags purges old tags.
+func (a *apiClient) purgeOldTags(dryRun bool) {
+	registry.PurgeOldTags(a.client, dryRun, a.config.PurgeTagsKeepDays, a.config.PurgeTagsKeepCount)
 }

@@ -38,7 +38,9 @@ admins: []
 # Debug mode. Affects only templates.
 debug: true
 
-# CLI options.
 # How many days to keep tags but also keep the minimal count provided no matter how old.
 purge_tags_keep_days: 90
 purge_tags_keep_count: 2
+# Schedules to purge tags with cron format. (Only for server mode)
+# Empty string disables this feature.
+purge_tags_schedule: ''
