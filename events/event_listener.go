@@ -144,13 +144,13 @@ func (e *EventListener) GetEvents(repository string) []EventRow {
 		e.logger.Error("Error selecting from table: ", err)
 		return events
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var row EventRow
 		rows.Scan(&row.ID, &row.Action, &row.Repository, &row.Tag, &row.IP, &row.User, &row.Created)
 		events = append(events, row)
 	}
-	rows.Close()
 	return events
 }
 
@@ -171,9 +171,11 @@ func (e *EventListener) getDababaseHandler() (*sql.DB, error) {
 
 	if e.databaseDriver == "mysql" {
 		schema = strings.Replace(schema, "AUTOINCREMENT", "AUTO_INCREMENT", 1)
-		if _, err := db.Query("SELECT * FROM events LIMIT 1"); err != nil {
+		rows, err := db.Query("SELECT * FROM events LIMIT 1")
+		if err != nil {
 			firstRun = true
 		}
+		rows.Close()
 	}
 
 	// Create table on first run.

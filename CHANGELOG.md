@@ -1,5 +1,9 @@
 ## Changelog
 
+### Unreleased
+
+* When using MySQL for event storage, do not leak connections.
+
 ### 0.6
 
 * Add MySQL along with sqlite3 support as a registry events storage.
