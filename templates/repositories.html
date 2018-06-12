@@ -23,11 +23,15 @@
 {{block body()}}
 <div style="float: right">
     <select id="namespace" class="form-control input-sm" style="height: 36px">
-        <option value="" disabled>-- Namespace --</option>
         {{range namespace := namespaces}}
         <option value="{{ namespace }}">{{ namespace }}</option>
         {{end}}
     </select>
+</div>
+<div style="float: right">
+    <ol class="breadcrumb">
+        <li class="active">Namespace</li>
+    </ol>
 </div>
 
 <ol class="breadcrumb">

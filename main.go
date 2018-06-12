@@ -196,7 +196,7 @@ func (a *apiClient) viewTags(c echo.Context) error {
 	data.Set("repo", repo)
 	data.Set("tags", tags)
 	data.Set("deleteAllowed", deleteAllowed)
-	data.Set("events", a.eventListener.GetEvents(repo))
+	data.Set("events", a.eventListener.GetEvents(repoPath))
 
 	return c.Render(http.StatusOK, "tags.html", data)
 }
