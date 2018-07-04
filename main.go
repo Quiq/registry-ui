@@ -21,6 +21,7 @@ import (
 
 type configData struct {
 	ListenAddr            string   `yaml:"listen_addr"`
+	BasePath              string   `yaml:"base_path"`
 	RegistryURL           string   `yaml:"registry_url"`
 	VerifyTLS             bool     `yaml:"verify_tls"`
 	Username              string   `yaml:"registry_username"`
@@ -75,6 +76,15 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	// Normalize base path.
+	if a.config.BasePath != "" {
+		if !strings.HasPrefix(a.config.BasePath, "/") {
+			a.config.BasePath = "/" + a.config.BasePath
+		}
+		if strings.HasSuffix(a.config.BasePath, "/") {
+			a.config.BasePath = a.config.BasePath[0 : len(a.config.BasePath)-1]
+		}
+	}
 
 	// Init registry API client.
 	a.client = registry.NewClient(a.config.RegistryURL, a.config.VerifyTLS, a.config.Username, a.config.Password)
@@ -99,6 +109,7 @@ func main() {
 	// Template engine init.
 	view := jet.NewHTMLSet("templates")
 	view.SetDevelopmentMode(a.config.Debug)
+	view.AddGlobal("base_path", a.config.BasePath)
 	view.AddGlobal("registryHost", u.Host)
 	view.AddGlobal("pretty_size", func(size interface{}) string {
 		var value float64
@@ -137,22 +148,22 @@ func main() {
 	e.Renderer = &template{View: view}
 
 	// Web routes.
-	e.Static("/static", "static")
-	e.GET("/", a.viewRepositories)
-	e.GET("/:namespace", a.viewRepositories)
-	e.GET("/:namespace/:repo", a.viewTags)
-	e.GET("/:namespace/:repo/:tag", a.viewTagInfo)
-	e.GET("/:namespace/:repo/:tag/delete", a.deleteTag)
-	e.GET("/events", a.viewLog)
+	e.Static(a.config.BasePath+"/static", "static")
+	e.GET(a.config.BasePath+"/", a.viewRepositories)
+	e.GET(a.config.BasePath+"/:namespace", a.viewRepositories)
+	e.GET(a.config.BasePath+"/:namespace/:repo", a.viewTags)
+	e.GET(a.config.BasePath+"/:namespace/:repo/:tag", a.viewTagInfo)
+	e.GET(a.config.BasePath+"/:namespace/:repo/:tag/delete", a.deleteTag)
+	e.GET(a.config.BasePath+"/events", a.viewLog)
 
 	// Protected event listener.
-	p := e.Group("/api")
+	p := e.Group(a.config.BasePath + "/api")
 	p.Use(middleware.KeyAuthWithConfig(middleware.KeyAuthConfig{
 		Validator: middleware.KeyAuthValidator(func(token string, c echo.Context) (bool, error) {
 			return token == a.config.EventListenerToken, nil
 		}),
 	}))
-	p.POST("/events", a.receiveEvents)
+	p.POST(a.config.BasePath+"/events", a.receiveEvents)
 
 	e.Logger.Fatal(e.Start(a.config.ListenAddr))
 }
@@ -181,7 +192,6 @@ func (a *apiClient) viewRepositories(c echo.Context) error {
 	}
 
 	repos, _ := a.client.Repositories(true)[namespace]
-
 	data := jet.VarMap{}
 	data.Set("namespace", namespace)
 	data.Set("namespaces", a.client.Namespaces())
