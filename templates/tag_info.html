@@ -8,7 +8,7 @@
     {{if namespace != "library"}}
     <li><a href="{{ base_path }}/{{ namespace }}">{{ namespace }}</a></li>
     {{end}}
-    <li><a href="{{ base_path }}/{{ namespace }}/{{ repo }}">{{ repo }}</a></li>
+    <li><a href="{{ base_path }}/{{ namespace }}/{{ repo|url_decoded_path }}">{{ repo }}</a></li>
     <li class="active">{{ tag }}</li>
 </ol>
 <table class="table table-striped table-bordered">

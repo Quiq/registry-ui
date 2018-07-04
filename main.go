@@ -133,6 +133,17 @@ func main() {
 		}
 		return res
 	})
+	view.AddGlobal("url_encoded_path", func(m interface{}) string {
+		return url.PathEscape(m.(string))
+
+	})
+	view.AddGlobal("url_decoded_path", func(m interface{}) string {
+		res, err := url.PathUnescape(m.(string))
+		if err != nil {
+			return m.(string)
+		}
+		return res
+	})
 	e := echo.New()
 	e.Renderer = &template{View: view}
 
@@ -206,7 +217,7 @@ func (a *apiClient) viewTags(c echo.Context) error {
 	data.Set("repo", repo)
 	data.Set("tags", tags)
 	data.Set("deleteAllowed", deleteAllowed)
-	data.Set("events", a.eventListener.GetEvents(repo))
+	data.Set("events", a.eventListener.GetEvents(repoPath))
 
 	return c.Render(http.StatusOK, "tags.html", data)
 }

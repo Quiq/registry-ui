@@ -1,5 +1,10 @@
 ## Changelog
 
+### Unreleased
+
+* When using MySQL for event storage, do not leak connections.
+* Last events were not shown when viewing a repo of non-default namespace.
+
 ### 0.6
 
 * Add MySQL along with sqlite3 support as a registry events storage.
