@@ -1,10 +1,10 @@
 # Listen interface.
 listen_addr: 0.0.0.0:8000
 # Base path of Docker Registry UI.
-base_path: /
+base_path: /ui
 
 # Registry URL with schema and port.
-registry_url: https://docker-registry.local
+registry_url: http://registry:5000
 # Verify TLS certificate when using https.
 verify_tls: true
 
@@ -12,8 +12,8 @@ verify_tls: true
 # They need to have a full access to the registry.
 # If token authentication service is enabled, it will be auto-discovered and those credentials
 # will be used to obtain access tokens.
-registry_username: user
-registry_password: pass
+# registry_username: user
+# registry_password: pass
 
 # Event listener token.
 # The same one should be configured on Docker registry as Authorization Bearer token.

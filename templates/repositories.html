@@ -8,12 +8,14 @@
             "stateSave": true
         });
         $('#namespace').on('change', function (e) {
-            window.location = '/' + this.value;
+            window.location = '{{ base_path }}/' + this.value;
         });
-        if (window.location.pathname == '/') {
+        namespace = window.location.pathname;
+        namespace = namespace.replace("{{ base_path }}", "");
+        if (namespace == '/') {
             namespace = 'library';
         } else {
-            namespace = window.location.pathname.split('/')[1]
+            namespace = namespace.split('/')[1]
         }
         $('#namespace').val(namespace);
     });
@@ -35,7 +37,7 @@
 </div>
 
 <ol class="breadcrumb">
-    <li><a href="/">Home</a></li>
+    <li><a href="{{ base_path }}/">Home</a></li>
 </ol>
 
 <table id="datatable" class="table table-striped table-bordered">
@@ -48,7 +50,7 @@
     <tbody>
         {{range repo := repos}}
             <tr>
-                <td><a href="/{{ namespace }}/{{ repo |url_encoded_path }}">{{ repo }}</a></td>
+                <td><a href="{{ base_path }}/{{ namespace }}/{{ repo|url_encoded_path }}">{{ repo }}</a></td>
                 <td>{{ tagCounts[namespace+"/"+repo] }}</td>
             </tr>
         {{end}}
