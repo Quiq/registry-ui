@@ -1,9 +1,13 @@
 ## Changelog
 
-### Unreleased
+### 0.7
 
 * When using MySQL for event storage, do not leak connections.
 * Last events were not shown when viewing a repo of non-default namespace.
+* Support repos with slash in the name.
+* Enable Sonatype Nexus compatibility.
+* Add `base_path` option to the config to run UI from non-root.
+* Add built-in cron feature for purging tags task.
 
 ### 0.6
 

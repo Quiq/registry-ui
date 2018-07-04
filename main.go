@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -107,44 +106,8 @@ func main() {
 	a.eventListener = events.NewEventListener(a.config.EventDatabaseDriver, a.config.EventDatabaseLocation, a.config.EventRetentionDays)
 
 	// Template engine init.
-	view := jet.NewHTMLSet("templates")
-	view.SetDevelopmentMode(a.config.Debug)
-	view.AddGlobal("base_path", a.config.BasePath)
-	view.AddGlobal("registryHost", u.Host)
-	view.AddGlobal("pretty_size", func(size interface{}) string {
-		var value float64
-		switch i := size.(type) {
-		case gjson.Result:
-			value = float64(i.Int())
-		case int64:
-			value = float64(i)
-		}
-		return registry.PrettySize(value)
-	})
-	view.AddGlobal("pretty_time", func(datetime interface{}) string {
-		d := strings.Replace(datetime.(string), "T", " ", 1)
-		d = strings.Replace(d, "Z", "", 1)
-		return strings.Split(d, ".")[0]
-	})
-	view.AddGlobal("parse_map", func(m interface{}) string {
-		var res string
-		for _, k := range registry.SortedMapKeys(m) {
-			res = res + fmt.Sprintf(`<tr><td style="padding: 0 10px; width: 20%%">%s</td><td style="padding: 0 10px">%v</td></tr>`, k, m.(map[string]interface{})[k])
-		}
-		return res
-	})
-	view.AddGlobal("url_encoded_path", func(m interface{}) string {
-		return url.PathEscape(m.(string))
-	})
-	view.AddGlobal("url_decoded_path", func(m interface{}) string {
-		res, err := url.PathUnescape(m.(string))
-		if err != nil {
-			return m.(string)
-		}
-		return res
-	})
 	e := echo.New()
-	e.Renderer = &template{View: view}
+	e.Renderer = setupRenderer(a.config.Debug, u.Host, a.config.BasePath)
 
 	// Web routes.
 	e.Static(a.config.BasePath+"/static", "static")
@@ -162,26 +125,9 @@ func main() {
 			return token == a.config.EventListenerToken, nil
 		}),
 	}))
-	p.POST(a.config.BasePath+"/events", a.receiveEvents)
+	p.POST("/events", a.receiveEvents)
 
 	e.Logger.Fatal(e.Start(a.config.ListenAddr))
-}
-
-// Render render template.
-func (r *template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	t, err := r.View.GetTemplate(name)
-	if err != nil {
-		panic(fmt.Errorf("Fatal error template file: %s", err))
-	}
-	vars, ok := data.(jet.VarMap)
-	if !ok {
-		vars = jet.VarMap{}
-	}
-	err = t.Execute(w, vars, nil)
-	if err != nil {
-		panic(fmt.Errorf("Error rendering template %s: %s", name, err))
-	}
-	return nil
 }
 
 func (a *apiClient) viewRepositories(c echo.Context) error {
@@ -233,7 +179,7 @@ func (a *apiClient) viewTagInfo(c echo.Context) error {
 
 	sha256, infoV1, infoV2 := a.client.TagInfo(repoPath, tag, false)
 	if infoV1 == "" || infoV2 == "" {
-		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/%s/%s", namespace, repo))
+		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/%s/%s", a.config.BasePath, namespace, repo))
 	}
 
 	var imageSize int64
@@ -293,7 +239,7 @@ func (a *apiClient) deleteTag(c echo.Context) error {
 		a.client.DeleteTag(repoPath, tag)
 	}
 
-	return c.Redirect(http.StatusSeeOther, fmt.Sprintf("/%s/%s", namespace, repo))
+	return c.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/%s/%s", a.config.BasePath, namespace, repo))
 }
 
 // checkDeletePermission check if tag deletion is allowed whether by anyone or permitted users.

@@ -1,7 +1,7 @@
 {{extends "base.html"}}
 
 {{block head()}}
-<script type="text/javascript" src="{{ base_path }}/static/bootstrap-confirmation.min.js"></script>
+<script type="text/javascript" src="{{ basePath }}/static/bootstrap-confirmation.min.js"></script>
 <script type="text/javascript" src="https://cdn.datatables.net/plug-ins/1.10.16/sorting/natural.js"></script>
 <script type="text/javascript">
     $(document).ready(function() {
@@ -29,11 +29,11 @@
 
 {{block body()}}
 <ol class="breadcrumb">
-    <li><a href="{{ base_path }}/">Home</a></li>
+    <li><a href="{{ basePath }}/">Home</a></li>
     {{if namespace != "library"}}
-    <li><a href="{{ base_path }}/{{ namespace }}">{{ namespace }}</a></li>
+    <li><a href="{{ basePath }}/{{ namespace }}">{{ namespace }}</a></li>
     {{end}}
-    <li class="active">{{ repo |url_decoded_path }}</li>
+    <li class="active">{{ repo|url_decode }}</li>
 </ol>
 
 <table id="datatable" class="table table-striped table-bordered">
@@ -46,9 +46,9 @@
         {{range tag := tags}}
         <tr>
             <td>
-                <a href="{{ base_path }}/{{ namespace }}/{{ repo }}/{{ tag }}">{{ tag }}</a>
+                <a href="{{ basePath }}/{{ namespace }}/{{ repo }}/{{ tag }}">{{ tag }}</a>
                 {{if deleteAllowed}}
-                <a href="{{ base_path }}/{{ namespace }}/{{ repo }}/{{ tag }}/delete" data-toggle="confirmation" class="btn btn-danger btn-xs pull-right" role="button">Delete</a>
+                <a href="{{ basePath }}/{{ namespace }}/{{ repo }}/{{ tag }}/delete" data-toggle="confirmation" class="btn btn-danger btn-xs pull-right" role="button">Delete</a>
                 {{end}}
             </td>
         </tr>

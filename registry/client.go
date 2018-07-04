@@ -69,7 +69,7 @@ func NewClient(url string, verifyTLS bool, username, password string) *Client {
 			c.logger.Warn("No token auth service discovered from ", c.url)
 			return nil
 		}
-	} else if strings.HasPrefix(strings.ToLower(authHeader), strings.ToLower("Basic")) {
+	} else if strings.HasPrefix(strings.ToLower(authHeader), "basic") {
 		c.request = c.request.SetBasicAuth(c.username, c.password)
 		c.logger.Info("It was discovered the registry is configured with HTTP basic auth.")
 	}
