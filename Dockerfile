@@ -12,7 +12,7 @@ RUN cd /opt/src/github.com/quiq/docker-registry-ui && \
 
 ADD events /opt/src/github.com/quiq/docker-registry-ui/events
 ADD registry /opt/src/github.com/quiq/docker-registry-ui/registry
-ADD main.go /opt/src/github.com/quiq/docker-registry-ui/
+ADD *.go /opt/src/github.com/quiq/docker-registry-ui/
 RUN cd /opt/src/github.com/quiq/docker-registry-ui && \
     go test -v ./registry && \
     go build -o /opt/docker-registry-ui github.com/quiq/docker-registry-ui

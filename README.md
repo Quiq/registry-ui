@@ -56,6 +56,7 @@ To receive events you need to configure Registry as follow:
             - application/octet-stream
 
 Adjust url and token as appropriate.
+If you are running UI from non-root base path, e.g. /ui, the URL path for above will be `/ui/api/events`.
 
 ## Using MySQL instead of sqlite3 for event listener
 
@@ -85,13 +86,13 @@ You can try to run in dry-run mode first to see what is going to be purged:
 
     docker exec -t registry-ui /opt/docker-registry-ui -purge-tags -dry-run
 
-Alternatively, you can schedule the purging task with built-in cron service.
+Alternatively, you can schedule the purging task with built-in cron feature:
 
-```config.yaml
-purge_tags_keep_days: 90
-purge_tags_keep_count: 2
-purge_tags_schedule: '10 3 * * *'
-```
+    purge_tags_keep_days: 90
+    purge_tags_keep_count: 2
+    purge_tags_schedule: '0 10 3 * * *'
+
+Note, the cron schedule format includes seconds! See https://godoc.org/github.com/robfig/cron
 
 ### Debug mode
 

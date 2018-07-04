@@ -43,6 +43,8 @@ debug: true
 # How many days to keep tags but also keep the minimal count provided no matter how old.
 purge_tags_keep_days: 90
 purge_tags_keep_count: 2
-# Schedules to purge tags with cron format. (Only for server mode)
+# Enable built-in cron to schedule purging tags in server mode.
 # Empty string disables this feature.
+# Example: '25 54 17 * * *' will run it at 17:54:25 daily.
+# Note, the cron schedule format includes seconds! See https://godoc.org/github.com/robfig/cron
 purge_tags_schedule: ''
