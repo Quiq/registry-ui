@@ -48,7 +48,7 @@
     <tbody>
         {{range repo := repos}}
             <tr>
-                <td><a href="/{{ namespace }}/{{ repo }}">{{ repo }}</a></td>
+                <td><a href="/{{ namespace }}/{{ repo |url_encoded_path }}">{{ repo }}</a></td>
                 <td>{{ tagCounts[namespace+"/"+repo] }}</td>
             </tr>
         {{end}}

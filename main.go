@@ -122,6 +122,17 @@ func main() {
 		}
 		return res
 	})
+	view.AddGlobal("url_encoded_path", func(m interface{}) string {
+		return url.PathEscape(m.(string))
+
+	})
+	view.AddGlobal("url_decoded_path", func(m interface{}) string {
+		res, err := url.PathUnescape(m.(string))
+		if err != nil {
+			return m.(string)
+		}
+		return res
+	})
 	e := echo.New()
 	e.Renderer = &template{View: view}
 

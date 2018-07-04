@@ -33,7 +33,7 @@
     {{if namespace != "library"}}
     <li><a href="/{{ namespace }}">{{ namespace }}</a></li>
     {{end}}
-    <li class="active">{{ repo }}</li>
+    <li class="active">{{ repo |url_decoded_path }}</li>
 </ol>
 
 <table id="datatable" class="table table-striped table-bordered">
