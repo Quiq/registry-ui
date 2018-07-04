@@ -85,6 +85,14 @@ You can try to run in dry-run mode first to see what is going to be purged:
 
     docker exec -t registry-ui /opt/docker-registry-ui -purge-tags -dry-run
 
+Alternatively, you can schedule the purging task with built-in cron service.
+
+```config.yaml
+purge_tags_keep_days: 90
+purge_tags_keep_count: 2
+purge_tags_schedule: '10 3 * * *'
+```
+
 ### Debug mode
 
 To increase http request verbosity, run container with `-e GOREQUEST_DEBUG=1`.
