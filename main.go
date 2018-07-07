@@ -26,6 +26,7 @@ type configData struct {
 	VerifyTLS             bool     `yaml:"verify_tls"`
 	Username              string   `yaml:"registry_username"`
 	Password              string   `yaml:"registry_password"`
+	PasswordFile          string   `yaml:"registry_password_file"`
 	EventListenerToken    string   `yaml:"event_listener_token"`
 	EventRetentionDays    int      `yaml:"event_retention_days"`
 	EventDatabaseDriver   string   `yaml:"event_database_driver"`
@@ -85,6 +86,17 @@ func main() {
 		if strings.HasSuffix(a.config.BasePath, "/") {
 			a.config.BasePath = a.config.BasePath[0 : len(a.config.BasePath)-1]
 		}
+	}
+	// Read password from file.
+	if a.config.PasswordFile != "" {
+		if _, err := os.Stat(a.config.PasswordFile); os.IsNotExist(err) {
+			panic(err)
+		}
+		passwordBytes, err := ioutil.ReadFile(a.config.PasswordFile)
+		if err != nil {
+			panic(err)
+		}
+		a.config.Password = string(passwordBytes[:])
 	}
 
 	// Init registry API client.
