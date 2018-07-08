@@ -105,7 +105,7 @@ func (c *Client) getToken(scope string) string {
 }
 
 // callRegistry make an HTTP request to Docker registry.
-func (c *Client) callRegistry(uri, scope string, manifest uint, delete bool) (rdata, rdigest string) {
+func (c *Client) callRegistry(uri, scope string, manifest uint, delete bool) (string, gorequest.Response) {
 	acceptHeader := fmt.Sprintf("application/vnd.docker.distribution.manifest.v%d+json", manifest)
 	authHeader := ""
 	if c.authURL != "" {
@@ -115,13 +115,13 @@ func (c *Client) callRegistry(uri, scope string, manifest uint, delete bool) (rd
 	resp, data, errs := c.request.Get(c.url+uri).Set("Accept", acceptHeader).Set("Authorization", authHeader).Set("User-Agent", "docker-registry-ui").End()
 	if len(errs) > 0 {
 		c.logger.Error(errs[0])
-		return "", ""
+		return "", resp
 	}
 
 	c.logger.Info("GET ", uri, " ", resp.Status)
 	// Returns 404 when no tags in the repo.
 	if resp.StatusCode != 200 {
-		return "", ""
+		return "", resp
 	}
 	digest := resp.Header.Get("Docker-Content-Digest")
 
@@ -136,7 +136,7 @@ func (c *Client) callRegistry(uri, scope string, manifest uint, delete bool) (rd
 			// Returns 202 on success.
 			c.logger.Info("DELETE ", uri, " (", parts[1], ") ", resp.Status)
 		}
-		return "", ""
+		return "", resp
 	}
 
 	return data, digest
@@ -205,7 +205,8 @@ func (c *Client) TagInfo(repo, tag string, v1only bool) (rsha256, rinfoV1, rinfo
 		return "", infoV1, ""
 	}
 
-	infoV2, digest := c.callRegistry(fmt.Sprintf("/v2/%s/manifests/%s", repo, tag), scope, 2, false)
+	infoV2, resp := c.callRegistry(fmt.Sprintf("/v2/%s/manifests/%s", repo, tag), scope, 2, false)
+	digest := resp.Header.Get("Docker-Content-Digest")
 	if infoV2 == "" || digest == "" {
 		return "", "", ""
 	}
