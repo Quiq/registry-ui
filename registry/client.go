@@ -139,7 +139,7 @@ func (c *Client) callRegistry(uri, scope string, manifest uint, delete bool) (st
 		return "", resp
 	}
 
-	return data, digest
+	return data, resp
 }
 
 // Namespaces list repo namespaces.
@@ -161,24 +161,39 @@ func (c *Client) Repositories(useCache bool) map[string][]string {
 
 	c.mux.Lock()
 	defer c.mux.Unlock()
+
+	linkRegexp := regexp.MustCompile("^<(.*?)>;.*$")
 	scope := "registry:catalog:*"
-	data, _ := c.callRegistry("/v2/_catalog", scope, 2, false)
-	if data == "" {
-		return c.repos
-	}
-
+	uri := "/v2/_catalog"
 	c.repos = map[string][]string{}
-	for _, r := range gjson.Get(data, "repositories").Array() {
-		namespace := "library"
-		repo := r.String()
-		if strings.Contains(repo, "/") {
-			f := strings.SplitN(repo, "/", 2)
-			namespace = f[0]
-			repo = f[1]
+	for {
+		data, resp := c.callRegistry(uri, scope, 2, false)
+		if data == "" {
+			return c.repos
 		}
-		c.repos[namespace] = append(c.repos[namespace], repo)
-	}
 
+		for _, r := range gjson.Get(data, "repositories").Array() {
+			namespace := "library"
+			repo := r.String()
+			if strings.Contains(repo, "/") {
+				f := strings.SplitN(repo, "/", 2)
+				namespace = f[0]
+				repo = f[1]
+			}
+			c.repos[namespace] = append(c.repos[namespace], repo)
+		}
+
+		// pagination
+		linkHeader := resp.Header.Get("Link")
+		link := linkRegexp.FindStringSubmatch(linkHeader)
+		if len(link) == 2 {
+			// update uri and query next page
+			uri = link[1]
+		} else {
+			// no more pages
+			break
+		}
+	}
 	return c.repos
 }
 
