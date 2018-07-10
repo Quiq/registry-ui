@@ -77,6 +77,12 @@ You can create a table manually if you don't want to grant `CREATE` permission:
 
 ### Schedule a cron task for purging tags
 
+To delete tags you need to enable the corresponding option in Docker Registry config. For example:
+
+    storage:
+      delete:
+        enabled: true
+
 The following example shows how to run a cron task to purge tags older than X days but also keep
 at least Y tags no matter how old. Assuming container has been already running.
 
