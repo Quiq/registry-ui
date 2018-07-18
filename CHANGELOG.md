@@ -1,8 +1,12 @@
 ## Changelog
 
+### 0.7.1 (2018-07-18)
+
+* Fix panic when using MySQL for events storage and no table created yet.
+
 ### 0.7 (2018-07-04)
 
-* When using MySQL for event storage, do not leak connections.
+* When using MySQL for events storage, do not leak connections.
 * Last events were not shown when viewing a repo of non-default namespace.
 * Support repos with slash in the name.
 * Enable Sonatype Nexus compatibility.

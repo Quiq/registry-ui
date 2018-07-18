@@ -175,7 +175,9 @@ func (e *EventListener) getDababaseHandler() (*sql.DB, error) {
 		if err != nil {
 			firstRun = true
 		}
-		rows.Close()
+		if rows != nil {
+			rows.Close()
+		}
 	}
 
 	// Create table on first run.
