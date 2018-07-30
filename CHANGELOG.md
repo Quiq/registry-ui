@@ -1,5 +1,9 @@
 ## Changelog
 
+### 0.7.2 (2018-07-30)
+
+* Make web root accessible w/o trailing slash when base_path is configured.
+
 ### 0.7.1 (2018-07-18)
 
 * Fix panic when using MySQL for events storage and no table created yet.

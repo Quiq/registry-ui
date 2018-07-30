@@ -124,6 +124,9 @@ func main() {
 
 	// Web routes.
 	e.Static(a.config.BasePath+"/static", "static")
+	if a.config.BasePath != "" {
+		e.GET(a.config.BasePath, a.viewRepositories)
+	}
 	e.GET(a.config.BasePath+"/", a.viewRepositories)
 	e.GET(a.config.BasePath+"/:namespace", a.viewRepositories)
 	e.GET(a.config.BasePath+"/:namespace/:repo", a.viewTags)
