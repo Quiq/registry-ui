@@ -18,7 +18,7 @@ RUN cd /opt/src/github.com/quiq/docker-registry-ui && \
     go build -o /opt/docker-registry-ui github.com/quiq/docker-registry-ui
 
 
-FROM alpine:3.7
+FROM alpine:3.8
 
 WORKDIR /opt
 RUN apk add --no-cache ca-certificates && \
