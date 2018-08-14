@@ -6,7 +6,10 @@
         $('#datatable').DataTable({
             "pageLength": 10,
             "order": [[ 4, 'desc' ]],
-            "stateSave": true
+            "stateSave": true,
+            "language": {
+                "emptyTable": "No events."
+            }
         });
     });
 </script>

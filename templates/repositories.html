@@ -3,10 +3,6 @@
 {{block head()}}
 <script type="text/javascript">
     $(document).ready(function() {
-        $('#datatable').DataTable({
-            "pageLength": 25,
-            "stateSave": true
-        });
         $('#namespace').on('change', function (e) {
             window.location = '{{ basePath }}/' + this.value;
         });
@@ -18,6 +14,14 @@
             namespace = namespace.split('/')[1]
         }
         $('#namespace').val(namespace);
+
+        $('#datatable').DataTable({
+            "pageLength": 25,
+            "stateSave": true,
+            "language": {
+                "emptyTable": "No repositories in \"" + namespace + "\" namespace."
+            }
+        });
     });
 </script>
 {{end}}

@@ -11,7 +11,10 @@
             "stateSave": true,
             columnDefs: [
               { type: 'natural', targets: 0 }
-            ]
+            ],
+            "language": {
+                "emptyTable": "No tags in this repository."
+            }
         })
         function populateConfirmation()  {
             $('[data-toggle=confirmation]').confirmation({
