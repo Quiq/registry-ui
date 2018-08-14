@@ -39,6 +39,7 @@ func setupRenderer(debug bool, registryHost, basePath string) *Template {
 	view := jet.NewHTMLSet("templates")
 	view.SetDevelopmentMode(debug)
 
+	view.AddGlobal("version", version)
 	view.AddGlobal("basePath", basePath)
 	view.AddGlobal("registryHost", registryHost)
 	view.AddGlobal("pretty_size", func(size interface{}) string {
