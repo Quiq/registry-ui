@@ -96,7 +96,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		a.config.Password = string(passwordBytes[:])
+		a.config.Password = strings.TrimSuffix(string(passwordBytes[:]), "\n")
 	}
 
 	// Init registry API client.

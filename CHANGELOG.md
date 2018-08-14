@@ -1,5 +1,9 @@
 ## Changelog
 
+### Unreleased
+
+* Add `registry_password_file` option to the config file.
+
 ### 0.7.2 (2018-07-30)
 
 * Make web root accessible w/o trailing slash when base_path is configured.
