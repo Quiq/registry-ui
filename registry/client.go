@@ -148,6 +148,9 @@ func (c *Client) Namespaces() []string {
 	for k := range c.repos {
 		namespaces = append(namespaces, k)
 	}
+	if !ItemInSlice("library", namespaces) {
+		namespaces = append(namespaces, "library")
+	}
 	sort.Strings(namespaces)
 	return namespaces
 }

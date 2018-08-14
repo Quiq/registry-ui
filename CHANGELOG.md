@@ -1,8 +1,11 @@
 ## Changelog
 
-### Unreleased
+### 0.7.3 (2018-08-14)
 
 * Add `registry_password_file` option to the config file.
+* Improve no data message on empty tables on UI.
+* Show the root namespace "library" in the dropdown even when there are no repos in it.
+* Switch alpine Docker image to 3.8.
 
 ### 0.7.2 (2018-07-30)
 

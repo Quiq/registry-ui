@@ -45,3 +45,13 @@ func TestPrettySize(t *testing.T) {
 		}
 	})
 }
+
+func TestItemInSlice(t *testing.T) {
+	a := []string{"abc", "def", "ghi"}
+	convey.Convey("Check whether element is in slice", t, func() {
+		convey.So(ItemInSlice("abc", a), convey.ShouldBeTrue)
+		convey.So(ItemInSlice("ghi", a), convey.ShouldBeTrue)
+		convey.So(ItemInSlice("abc1", a), convey.ShouldBeFalse)
+		convey.So(ItemInSlice("gh", a), convey.ShouldBeFalse)
+	})
+}

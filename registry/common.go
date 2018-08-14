@@ -42,3 +42,13 @@ func PrettySize(size float64) string {
 	}
 	return fmt.Sprintf("%.*f %s", 0, size, units[i])
 }
+
+// ItemInSlice check if item is an element of slice
+func ItemInSlice(item string, slice []string) bool {
+	for _, i := range slice {
+		if i == item {
+			return true
+		}
+	}
+	return false
+}
