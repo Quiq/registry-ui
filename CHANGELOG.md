@@ -1,5 +1,9 @@
 ## Changelog
 
+### 0.7.4 (2018-10-30)
+
+* Switch to Go 1.11 and Go Modules to track dependencies.
+
 ### 0.7.3 (2018-08-14)
 
 * Add `registry_password_file` option to the config file.

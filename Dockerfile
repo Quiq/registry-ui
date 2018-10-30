@@ -1,21 +1,18 @@
-FROM golang:1.10.3-alpine as builder
+FROM golang:1.11.1-alpine3.8 as builder
 
 ENV GOPATH /opt
+ENV GO111MODULE on
 
 RUN apk update && \
-    apk add ca-certificates git build-base && \
-    go get github.com/Masterminds/glide
+    apk add ca-certificates git bash gcc musl-dev
 
-ADD glide.* /opt/src/github.com/quiq/docker-registry-ui/
-RUN cd /opt/src/github.com/quiq/docker-registry-ui && \
-    /opt/bin/glide install
+WORKDIR /opt/src/github.com/quiq/docker-registry-ui
+ADD events events
+ADD registry registry
+ADD *.go go.mod go.sum ./
 
-ADD events /opt/src/github.com/quiq/docker-registry-ui/events
-ADD registry /opt/src/github.com/quiq/docker-registry-ui/registry
-ADD *.go /opt/src/github.com/quiq/docker-registry-ui/
-RUN cd /opt/src/github.com/quiq/docker-registry-ui && \
-    go test -v ./registry && \
-    go build -o /opt/docker-registry-ui github.com/quiq/docker-registry-ui
+RUN go test -v ./registry && \
+    go build -o /opt/docker-registry-ui *.go
 
 
 FROM alpine:3.8
