@@ -1,4 +1,4 @@
-FROM golang:1.11.1-alpine3.8 as builder
+FROM golang:1.11.2-alpine3.8 as builder
 
 ENV GOPATH /opt
 ENV GO111MODULE on
