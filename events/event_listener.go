@@ -20,7 +20,7 @@ const (
 	schemaSQLite = `
 	CREATE TABLE events (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		action CHAR(4) NULL,
+		action CHAR(5) NULL,
 		repository VARCHAR(100) NULL,
 		tag VARCHAR(100) NULL,
 		ip VARCHAR(15) NULL,
