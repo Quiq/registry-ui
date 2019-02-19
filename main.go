@@ -135,6 +135,7 @@ func main() {
 	e.Renderer = setupRenderer(a.config.Debug, u.Host, a.config.BasePath)
 
 	// Web routes.
+	e.File("/favicon.ico", "static/favicon.ico")
 	e.Static(a.config.BasePath+"/static", "static")
 	if a.config.BasePath != "" {
 		e.GET(a.config.BasePath, a.viewRepositories)
