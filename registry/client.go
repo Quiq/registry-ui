@@ -105,7 +105,7 @@ func (c *Client) getToken(scope string) string {
 }
 
 // callRegistry make an HTTP request to Docker registry.
-func (c *Client) callRegistry(uri, scope string, manifest uint, delete bool) (rdata, rdigest string) {
+func (c *Client) callRegistry(uri, scope string, manifest uint, delete bool) (string, gorequest.Response) {
 	acceptHeader := fmt.Sprintf("application/vnd.docker.distribution.manifest.v%d+json", manifest)
 	authHeader := ""
 	if c.authURL != "" {
@@ -115,13 +115,13 @@ func (c *Client) callRegistry(uri, scope string, manifest uint, delete bool) (rd
 	resp, data, errs := c.request.Get(c.url+uri).Set("Accept", acceptHeader).Set("Authorization", authHeader).Set("User-Agent", "docker-registry-ui").End()
 	if len(errs) > 0 {
 		c.logger.Error(errs[0])
-		return "", ""
+		return "", resp
 	}
 
 	c.logger.Info("GET ", uri, " ", resp.Status)
 	// Returns 404 when no tags in the repo.
 	if resp.StatusCode != 200 {
-		return "", ""
+		return "", resp
 	}
 	digest := resp.Header.Get("Docker-Content-Digest")
 
@@ -136,10 +136,10 @@ func (c *Client) callRegistry(uri, scope string, manifest uint, delete bool) (rd
 			// Returns 202 on success.
 			c.logger.Info("DELETE ", uri, " (", parts[1], ") ", resp.Status)
 		}
-		return "", ""
+		return "", resp
 	}
 
-	return data, digest
+	return data, resp
 }
 
 // Namespaces list repo namespaces.
@@ -164,24 +164,39 @@ func (c *Client) Repositories(useCache bool) map[string][]string {
 
 	c.mux.Lock()
 	defer c.mux.Unlock()
+
+	linkRegexp := regexp.MustCompile("^<(.*?)>;.*$")
 	scope := "registry:catalog:*"
-	data, _ := c.callRegistry("/v2/_catalog", scope, 2, false)
-	if data == "" {
-		return c.repos
-	}
-
+	uri := "/v2/_catalog"
 	c.repos = map[string][]string{}
-	for _, r := range gjson.Get(data, "repositories").Array() {
-		namespace := "library"
-		repo := r.String()
-		if strings.Contains(repo, "/") {
-			f := strings.SplitN(repo, "/", 2)
-			namespace = f[0]
-			repo = f[1]
+	for {
+		data, resp := c.callRegistry(uri, scope, 2, false)
+		if data == "" {
+			return c.repos
 		}
-		c.repos[namespace] = append(c.repos[namespace], repo)
-	}
 
+		for _, r := range gjson.Get(data, "repositories").Array() {
+			namespace := "library"
+			repo := r.String()
+			if strings.Contains(repo, "/") {
+				f := strings.SplitN(repo, "/", 2)
+				namespace = f[0]
+				repo = f[1]
+			}
+			c.repos[namespace] = append(c.repos[namespace], repo)
+		}
+
+		// pagination
+		linkHeader := resp.Header.Get("Link")
+		link := linkRegexp.FindStringSubmatch(linkHeader)
+		if len(link) == 2 {
+			// update uri and query next page
+			uri = link[1]
+		} else {
+			// no more pages
+			break
+		}
+	}
 	return c.repos
 }
 
@@ -208,7 +223,8 @@ func (c *Client) TagInfo(repo, tag string, v1only bool) (rsha256, rinfoV1, rinfo
 		return "", infoV1, ""
 	}
 
-	infoV2, digest := c.callRegistry(fmt.Sprintf("/v2/%s/manifests/%s", repo, tag), scope, 2, false)
+	infoV2, resp := c.callRegistry(fmt.Sprintf("/v2/%s/manifests/%s", repo, tag), scope, 2, false)
+	digest := resp.Header.Get("Docker-Content-Digest")
 	if infoV2 == "" || digest == "" {
 		return "", "", ""
 	}
