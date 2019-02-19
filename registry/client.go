@@ -123,10 +123,10 @@ func (c *Client) callRegistry(uri, scope string, manifest uint, delete bool) (st
 	if resp.StatusCode != 200 {
 		return "", resp
 	}
-	digest := resp.Header.Get("Docker-Content-Digest")
 
 	if delete {
 		// Delete by manifest digest reference.
+		digest := resp.Header.Get("Docker-Content-Digest")
 		parts := strings.Split(uri, "/manifests/")
 		uri = parts[0] + "/manifests/" + digest
 		resp, _, errs := c.request.Delete(c.url+uri).Set("Accept", acceptHeader).Set("Authorization", authHeader).Set("User-Agent", "docker-registry-ui").End()
