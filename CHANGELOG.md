@@ -1,5 +1,11 @@
 ## Changelog
 
+### 0.8.0 (2019-02-19)
+
+* Use go 1.11.5, alpine 3.9, echo 3.3.10.
+* Put all static files to the docker image instead of loading from CDN.
+* Now discover more than 100 repositories (thanks to Yuhi Ishikura @uphy).
+
 ### 0.7.4 (2018-10-30)
 
 * Switch to Go 1.11 and Go Modules to track dependencies.
