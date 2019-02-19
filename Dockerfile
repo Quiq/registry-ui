@@ -1,4 +1,4 @@
-FROM golang:1.11.4-alpine3.8 as builder
+FROM golang:1.11.5-alpine3.9 as builder
 
 ENV GOPATH /opt
 ENV GO111MODULE on
@@ -15,7 +15,7 @@ RUN go test -v ./registry && \
     go build -o /opt/docker-registry-ui *.go
 
 
-FROM alpine:3.8
+FROM alpine:3.9
 
 WORKDIR /opt
 RUN apk add --no-cache ca-certificates && \
