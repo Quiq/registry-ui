@@ -41,7 +41,10 @@
 </div>
 
 <ol class="breadcrumb">
-    <li><a href="{{ basePath }}/">Home</a></li>
+    <li><a href="{{ basePath }}/">{{ registryHost }}</a></li>
+    {{if namespace != "library"}}
+    <li><a href="{{ basePath }}/{{ namespace }}">{{ namespace }}</a></li>
+    {{end}}
 </ol>
 
 <table id="datatable" class="table table-striped table-bordered">
