@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"crypto"
 	"crypto/tls"
 	"fmt"
 	"regexp"
@@ -124,9 +125,17 @@ func (c *Client) callRegistry(uri, scope string, manifest uint, delete bool) (st
 		return "", resp
 	}
 
+	digest := resp.Header.Get("Docker-Content-Digest")
+	if digest == "" {
+		// Try to get digest from body instead, should be equal to what would be presented
+		// in Docker-Content-Digest
+		h := crypto.SHA256.New()
+		h.Write([]byte(data))
+		resp.Header.Set("Docker-Content-Digest", fmt.Sprintf("sha256:%x", h.Sum(nil)))
+	}
+
 	if delete {
 		// Delete by manifest digest reference.
-		digest := resp.Header.Get("Docker-Content-Digest")
 		parts := strings.Split(uri, "/manifests/")
 		uri = parts[0] + "/manifests/" + digest
 		resp, _, errs := c.request.Delete(c.url+uri).Set("Accept", acceptHeader).Set("Authorization", authHeader).Set("User-Agent", "docker-registry-ui").End()
