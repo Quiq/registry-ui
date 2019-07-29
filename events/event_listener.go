@@ -74,7 +74,7 @@ func (e *EventListener) ProcessEvents(request *http.Request) {
 	e.logger.Debugf("Received event: %+v", t)
 	j, _ := json.Marshal(t)
 
-	db, err := e.getDababaseHandler()
+	db, err := e.getDatabaseHandler()
 	if err != nil {
 		e.logger.Error(err)
 		return
@@ -128,7 +128,7 @@ func (e *EventListener) ProcessEvents(request *http.Request) {
 func (e *EventListener) GetEvents(repository string) []EventRow {
 	var events []EventRow
 
-	db, err := e.getDababaseHandler()
+	db, err := e.getDatabaseHandler()
 	if err != nil {
 		e.logger.Error(err)
 		return events
@@ -154,7 +154,7 @@ func (e *EventListener) GetEvents(repository string) []EventRow {
 	return events
 }
 
-func (e *EventListener) getDababaseHandler() (*sql.DB, error) {
+func (e *EventListener) getDatabaseHandler() (*sql.DB, error) {
 	firstRun := false
 	schema := schemaSQLite
 	if e.databaseDriver == "sqlite3" {
