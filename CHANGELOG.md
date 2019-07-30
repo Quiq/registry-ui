@@ -1,5 +1,11 @@
 ## Changelog
 
+### 0.8.2 (2019-07-30)
+
+* Add event_deletion_enabled option to the config, useful for master-master/cluster setups.
+* Generate SHA256 from response body if no Docker-Content-Digest header is present, e.g. with AWS ECR.
+* Bump go version.
+
 ### 0.8.1 (2019-02-20)
 
 * Add favicon.
