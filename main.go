@@ -31,6 +31,7 @@ type configData struct {
 	EventRetentionDays    int      `yaml:"event_retention_days"`
 	EventDatabaseDriver   string   `yaml:"event_database_driver"`
 	EventDatabaseLocation string   `yaml:"event_database_location"`
+	EventDeletionEnabled  bool     `yaml:"event_deletion_enabled"`
 	CacheRefreshInterval  uint8    `yaml:"cache_refresh_interval"`
 	AnyoneCanDelete       bool     `yaml:"anyone_can_delete"`
 	Admins                []string `yaml:"admins"`
@@ -128,7 +129,9 @@ func main() {
 	if a.config.EventDatabaseDriver != "sqlite3" && a.config.EventDatabaseDriver != "mysql" {
 		panic(fmt.Errorf("event_database_driver should be either sqlite3 or mysql"))
 	}
-	a.eventListener = events.NewEventListener(a.config.EventDatabaseDriver, a.config.EventDatabaseLocation, a.config.EventRetentionDays)
+	a.eventListener = events.NewEventListener(
+		a.config.EventDatabaseDriver, a.config.EventDatabaseLocation, a.config.EventRetentionDays, a.config.EventDeletionEnabled,
+	)
 
 	// Template engine init.
 	e := echo.New()

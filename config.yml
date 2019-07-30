@@ -12,7 +12,7 @@ verify_tls: true
 # They need to have a full access to the registry.
 # If token authentication service is enabled, it will be auto-discovered and those credentials
 # will be used to obtain access tokens.
-# When the registry_password_file entry is used, the password can be passed as a docker secret 
+# When the registry_password_file entry is used, the password can be passed as a docker secret
 # and read from file. This overides the registry_password entry.
 registry_username: user
 registry_password: pass
@@ -29,6 +29,10 @@ event_database_driver: sqlite3
 event_database_location: data/registry_events.db
 # event_database_driver: mysql
 # event_database_location: user:password@tcp(localhost:3306)/docker_events
+
+# You can disable event deletion on some hosts when you are running docker-registry on master-master or
+# cluster setup to avoid deadlocks or replication break.
+event_deletion_enabled: True
 
 # Cache refresh interval in minutes.
 # How long to cache repository list and tag counts.
