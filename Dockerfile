@@ -4,7 +4,8 @@ ENV GOPATH /opt
 ENV GO111MODULE on
 
 RUN apk update && \
-    apk add ca-certificates git bash gcc musl-dev
+    apk add ca-certificates git bash gcc musl-dev && \
+    apk add tzdata
 
 WORKDIR /opt/src/github.com/quiq/docker-registry-ui
 ADD events events
@@ -24,8 +25,6 @@ RUN apk add --no-cache ca-certificates && \
 ADD templates /opt/templates
 ADD static /opt/static
 COPY --from=builder /opt/docker-registry-ui /opt/
-
-RUN apk update && apk add tzdata
 
 USER nobody
 ENTRYPOINT ["/opt/docker-registry-ui"]
