@@ -25,5 +25,7 @@ ADD templates /opt/templates
 ADD static /opt/static
 COPY --from=builder /opt/docker-registry-ui /opt/
 
+RUN apk update && apk add tzdata
+
 USER nobody
 ENTRYPOINT ["/opt/docker-registry-ui"]
