@@ -14,9 +14,12 @@ verify_tls: true
 # will be used to obtain access tokens.
 # When the registry_password_file entry is used, the password can be passed as a docker secret
 # and read from file. This overides the registry_password entry.
+# When aws_region and aws_registry_id is used, it overrides the registry_username and registry_password entries.
 registry_username: user
 registry_password: pass
 # registry_password_file: /run/secrets/registry_password_file
+#aws_region: us-east-1
+#aws_registry_id: 123456789123
 
 # Event listener token.
 # The same one should be configured on Docker registry as Authorization Bearer token.

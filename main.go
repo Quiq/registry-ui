@@ -17,6 +17,12 @@ import (
 	"github.com/robfig/cron"
 	"github.com/tidwall/gjson"
 	"gopkg.in/yaml.v2"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ecr"
+
+	"encoding/base64"
 )
 
 type configData struct {
@@ -39,6 +45,8 @@ type configData struct {
 	PurgeTagsKeepDays     int      `yaml:"purge_tags_keep_days"`
 	PurgeTagsKeepCount    int      `yaml:"purge_tags_keep_count"`
 	PurgeTagsSchedule     string   `yaml:"purge_tags_schedule"`
+	AWSRegion             string   `yaml:"aws_region"`
+	AWSRegistryID         string   `yaml:"aws_registry_id"`
 }
 
 type template struct {
@@ -98,6 +106,34 @@ func main() {
 			panic(err)
 		}
 		a.config.Password = strings.TrimSuffix(string(passwordBytes[:]), "\n")
+	}
+	// Get authorization token for AWS ECR.
+	if a.config.AWSRegion != "" {
+		sess, err := session.NewSession(&aws.Config{
+			Region: aws.String(a.config.AWSRegion),
+		})
+		if err != nil {
+			panic(err)
+		}
+		// Get authorization token
+		input := &ecr.GetAuthorizationTokenInput{
+			RegistryIds: []*string{
+				aws.String(a.config.AWSRegistryID),
+			},
+		}
+		svc := ecr.New(sess)
+		authTokenOutput, err := svc.GetAuthorizationToken(input)
+		if err != nil {
+			panic(err)
+		}
+		authToken := *authTokenOutput.AuthorizationData[0].AuthorizationToken
+		decodedToken, err := base64.StdEncoding.DecodeString(authToken)
+		if err != nil {
+			panic(err)
+		}
+		// Override username and password with the ones found in token
+		a.config.Username = strings.Split(string(decodedToken), ":")[0]
+		a.config.Password = strings.Split(string(decodedToken), ":")[1]
 	}
 
 	// Init registry API client.
