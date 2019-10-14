@@ -78,6 +78,12 @@ func NewClient(url string, verifyTLS bool, username, password string) *Client {
 	return c
 }
 
+// RenewBasicAuth sets the basic auth credentials.
+func (c *Client) RenewBasicAuth(username, password string) {
+	c.request = c.request.SetBasicAuth(username, password)
+	c.logger.Info("Renewed basic auth credentials")
+}
+
 // getToken get existing or new auth token.
 func (c *Client) getToken(scope string) string {
 	// Check if we have already a token and it's not expired.

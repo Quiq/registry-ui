@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/CloudyKit/jet"
 	"github.com/labstack/echo"
@@ -109,37 +110,24 @@ func main() {
 	}
 	// Get authorization token for AWS ECR.
 	if a.config.AWSRegion != "" {
-		sess, err := session.NewSession(&aws.Config{
-			Region: aws.String(a.config.AWSRegion),
-		})
-		if err != nil {
-			panic(err)
-		}
-		// Get authorization token
-		input := &ecr.GetAuthorizationTokenInput{
-			RegistryIds: []*string{
-				aws.String(a.config.AWSRegistryID),
-			},
-		}
-		svc := ecr.New(sess)
-		authTokenOutput, err := svc.GetAuthorizationToken(input)
-		if err != nil {
-			panic(err)
-		}
-		authToken := *authTokenOutput.AuthorizationData[0].AuthorizationToken
-		decodedToken, err := base64.StdEncoding.DecodeString(authToken)
-		if err != nil {
-			panic(err)
-		}
-		// Override username and password with the ones found in token
-		a.config.Username = strings.Split(string(decodedToken), ":")[0]
-		a.config.Password = strings.Split(string(decodedToken), ":")[1]
+		a.setAWSCredentials()
 	}
 
 	// Init registry API client.
 	a.client = registry.NewClient(a.config.RegistryURL, a.config.VerifyTLS, a.config.Username, a.config.Password)
 	if a.client == nil {
 		panic(fmt.Errorf("cannot initialize api client or unsupported auth method"))
+	}
+
+	// When using AWS ECR, renew AWS credentials
+	if a.config.AWSRegion != "" {
+		go func() {
+			for {
+				time.Sleep(time.Hour * 8)
+				a.setAWSCredentials()
+				a.client.RenewBasicAuth(a.config.Username, a.config.Password)
+			}
+		}()
 	}
 
 	// Execute CLI task and exit.
@@ -196,6 +184,34 @@ func main() {
 	p.POST("/events", a.receiveEvents)
 
 	e.Logger.Fatal(e.Start(a.config.ListenAddr))
+}
+
+func (a *apiClient) setAWSCredentials() {
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String(a.config.AWSRegion),
+	})
+	if err != nil {
+		panic(err)
+	}
+	// Get authorization token
+	input := &ecr.GetAuthorizationTokenInput{
+		RegistryIds: []*string{
+			aws.String(a.config.AWSRegistryID),
+		},
+	}
+	svc := ecr.New(sess)
+	authTokenOutput, err := svc.GetAuthorizationToken(input)
+	if err != nil {
+		panic(err)
+	}
+	authToken := *authTokenOutput.AuthorizationData[0].AuthorizationToken
+	decodedToken, err := base64.StdEncoding.DecodeString(authToken)
+	if err != nil {
+		panic(err)
+	}
+	// Override username and password with the ones found in token
+	a.config.Username = strings.Split(string(decodedToken), ":")[0]
+	a.config.Password = strings.Split(string(decodedToken), ":")[1]
 }
 
 func (a *apiClient) viewRepositories(c echo.Context) error {
