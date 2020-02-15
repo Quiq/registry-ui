@@ -264,7 +264,7 @@ func (a *apiClient) viewTagInfo(c echo.Context) error {
 	data.Set("repo", repo)
 	data.Set("sha256", sha256)
 	data.Set("imageSize", imageSize)
-	data.Set("tag", gjson.Get(infoV1, "tag").String())
+	data.Set("tag", tag)
 	data.Set("repoPath", gjson.Get(infoV1, "name").String())
 	data.Set("created", gjson.Get(gjson.Get(infoV1, "history.0.v1Compatibility").String(), "created").String())
 	data.Set("layersCount", layersCount)
