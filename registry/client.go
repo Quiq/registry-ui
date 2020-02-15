@@ -106,8 +106,12 @@ func (c *Client) getToken(scope string) string {
 }
 
 // callRegistry make an HTTP request to Docker registry.
-func (c *Client) callRegistry(uri, scope string, manifest uint, delete bool) (string, gorequest.Response) {
-	acceptHeader := fmt.Sprintf("application/vnd.docker.distribution.manifest.v%d+json", manifest)
+func (c *Client) callRegistry(uri, scope string, manifest uint, delete bool, list bool) (string, gorequest.Response) {
+	endpoint := "manifest"
+	if list {
+		endpoint = "manifest.list"
+	}
+	acceptHeader := fmt.Sprintf("application/vnd.docker.distribution.%s.v%d+json", endpoint, manifest)
 	authHeader := ""
 	if c.authURL != "" {
 		authHeader = fmt.Sprintf("Bearer %s", c.getToken(scope))
@@ -179,7 +183,7 @@ func (c *Client) Repositories(useCache bool) map[string][]string {
 	uri := "/v2/_catalog"
 	c.repos = map[string][]string{}
 	for {
-		data, resp := c.callRegistry(uri, scope, 2, false)
+		data, resp := c.callRegistry(uri, scope, 2, false, false)
 		if data == "" {
 			return c.repos
 		}
@@ -212,7 +216,7 @@ func (c *Client) Repositories(useCache bool) map[string][]string {
 // Tags get tags for the repo.
 func (c *Client) Tags(repo string) []string {
 	scope := fmt.Sprintf("repository:%s:*", repo)
-	data, _ := c.callRegistry(fmt.Sprintf("/v2/%s/tags/list", repo), scope, 2, false)
+	data, _ := c.callRegistry(fmt.Sprintf("/v2/%s/tags/list", repo), scope, 2, false, false)
 	var tags []string
 	for _, t := range gjson.Get(data, "tags").Array() {
 		tags = append(tags, t.String())
@@ -220,10 +224,17 @@ func (c *Client) Tags(repo string) []string {
 	return tags
 }
 
+// Manifests gets manifest list entries for a tag for the repo.
+func (c *Client) Manifests(repo string, tag string) []gjson.Result {
+	scope := fmt.Sprintf("repository:%s:*", repo)
+	data, _ := c.callRegistry(fmt.Sprintf("/v2/%s/manifests/%s", repo, tag), scope, 2, false, true)
+	return gjson.Get(data, "manifests").Array()
+}
+
 // TagInfo get image info for the repo tag.
 func (c *Client) TagInfo(repo, tag string, v1only bool) (rsha256, rinfoV1, rinfoV2 string) {
 	scope := fmt.Sprintf("repository:%s:*", repo)
-	infoV1, _ := c.callRegistry(fmt.Sprintf("/v2/%s/manifests/%s", repo, tag), scope, 1, false)
+	infoV1, _ := c.callRegistry(fmt.Sprintf("/v2/%s/manifests/%s", repo, tag), scope, 1, false, false)
 	if infoV1 == "" {
 		return "", "", ""
 	}
@@ -232,7 +243,7 @@ func (c *Client) TagInfo(repo, tag string, v1only bool) (rsha256, rinfoV1, rinfo
 		return "", infoV1, ""
 	}
 
-	infoV2, resp := c.callRegistry(fmt.Sprintf("/v2/%s/manifests/%s", repo, tag), scope, 2, false)
+	infoV2, resp := c.callRegistry(fmt.Sprintf("/v2/%s/manifests/%s", repo, tag), scope, 2, false, false)
 	digest := resp.Header.Get("Docker-Content-Digest")
 	if infoV2 == "" || digest == "" {
 		return "", "", ""
@@ -269,5 +280,5 @@ func (c *Client) CountTags(interval uint8) {
 // DeleteTag delete image tag.
 func (c *Client) DeleteTag(repo, tag string) {
 	scope := fmt.Sprintf("repository:%s:*", repo)
-	c.callRegistry(fmt.Sprintf("/v2/%s/manifests/%s", repo, tag), scope, 2, true)
+	c.callRegistry(fmt.Sprintf("/v2/%s/manifests/%s", repo, tag), scope, 2, true, false)
 }

@@ -243,6 +243,22 @@ func (a *apiClient) viewTagInfo(c echo.Context) error {
 		layersCount = len(gjson.Get(infoV1, "fsLayers").Array())
 	}
 
+	isDigest := strings.HasPrefix(tag, "sha256:")
+	var digests []map[string]gjson.Result
+	var digestSizes []int64
+	for _, s := range a.client.Manifests(repoPath, tag) {
+		var r map[string]gjson.Result = s.Map()
+		r["architecture"] = s.Get("platform.architecture")
+		r["os"] = s.Get("platform.os")
+		_, _, dInfo := a.client.TagInfo(repoPath, s.Get("digest").String(), false)
+		var dSize int64
+		for _, d := range gjson.Get(dInfo, "layers.#.size").Array() {
+			dSize = dSize + d.Int()
+		}
+		digestSizes = append(digestSizes, dSize)
+		digests = append(digests, r)
+	}
+
 	data := jet.VarMap{}
 	data.Set("namespace", namespace)
 	data.Set("repo", repo)
@@ -254,6 +270,9 @@ func (a *apiClient) viewTagInfo(c echo.Context) error {
 	data.Set("layersCount", layersCount)
 	data.Set("layersV2", layersV2)
 	data.Set("layersV1", layersV1)
+	data.Set("isDigest", isDigest)
+	data.Set("digests", digests)
+	data.Set("digestSizes", digestSizes)
 
 	return c.Render(http.StatusOK, "tag_info.html", data)
 }
