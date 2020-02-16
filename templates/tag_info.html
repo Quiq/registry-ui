@@ -17,11 +17,10 @@
             <th colspan="2">Image Details</th>
         </tr>
     </thead>
-    {{if not isDigest}}
     <tr>
         <td width="20%">Image</td><td>{{ registryHost }}/{{ repoPath }}:{{ tag }}</td>
     </tr>
-    {{end}}
+    {{if not isListOnly}}
     <tr>
         <td>sha256</td><td>{{ sha256 }}</td>
     </tr>
@@ -36,32 +35,44 @@
     <tr>
         <td>Layer Count</td><td>{{ layersCount }}</td>
     </tr>
+    {{end}}
 </table>
 
-{{if len(digests) != 0}}
+{{if digests}}
 <h4>Manifest List v2</h4>
+{{range index, manifest := digests}}
 <table class="table table-striped table-bordered">
     <thead bgcolor="#ddd">
         <tr>
-            <th>Manifest #</th>
-            <th>Digest</th>
-            <th>Size</th>
-            <th>Architecture</th>
-            <th>OS</th>
+            <th colspan="2">Manifest #{{ index+1 }}</th>
         </tr>
     </thead>
-{{range index, manifest := digests}}
+    {{range key := manifest["ordered_keys"]}}
     <tr>
-        <td>{{ index+1 }}</td>
+        <td width="20%">{{ key }}</td>
+        {{if key == "platform" || key == "annotations"}}
+        <td style="padding: 0">
+            <table class="table table-bordered" style="padding: 0; width: 100%; margin-bottom: 0; min-height: 37px">
+                <!-- Nested range does not work. Iterating via filter over the map. -->
+                {{ manifest[key]|parse_map|raw }}
+            </table>
+        </td>
+        {{else if key == "size"}}
+        <td>{{ manifest[key]|pretty_size }}</td>
+        {{else if key == "digest"}}
+        {{if not isListOnly}}
         <td><a href='{{ basePath }}/{{ namespace }}/{{ repo }}/{{ manifest["digest"] }}'>{{ manifest["digest"] }}</a></td>
-        <td>{{ digestSizes[index]|pretty_size }}</td>
-        <td>{{ manifest["architecture"] }}</td>
-        <td>{{ manifest["os"] }}</td>
+        {{else}}
+        <td>{{ manifest["digest"] }}</td>
+        {{end}}
+        {{else}}
+        <td>{{ manifest[key] }}</td>
+        {{end}}
     </tr>
-{{end}}
+    {{end}}
 </table>
-{{else}}
-{{if layersV2}}
+{{end}}
+{{else if layersV2}}
 <h4>Manifest v2</h4>
 <table class="table table-striped table-bordered">
     <thead bgcolor="#ddd">
@@ -80,9 +91,8 @@
 {{end}}
 </table>
 {{end}}
-{{end}}
 
-{{if not isDigest}}
+{{if not isListOnly && not isDigest}}
 <h4>Manifest v1</h4>
 {{range index, layer := layersV1}}
 <table class="table table-striped table-bordered">

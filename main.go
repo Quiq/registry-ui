@@ -210,8 +210,14 @@ func (a *apiClient) viewTagInfo(c echo.Context) error {
 	}
 
 	sha256, infoV1, infoV2 := a.client.TagInfo(repoPath, tag, false)
-	if infoV1 == "" || infoV2 == "" {
+	manifests := a.client.Manifests(repoPath, tag)
+	if (infoV1 == "" || infoV2 == "") && len(manifests) == 0 {
 		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/%s/%s", a.config.BasePath, namespace, repo))
+	}
+	isListOnly := (infoV1 == "" && infoV2 == "")
+	newRepoPath := gjson.Get(infoV1, "name").String()
+	if newRepoPath != "" {
+		repoPath = newRepoPath
 	}
 
 	var imageSize int64
@@ -244,18 +250,20 @@ func (a *apiClient) viewTagInfo(c echo.Context) error {
 	}
 
 	isDigest := strings.HasPrefix(tag, "sha256:")
-	var digests []map[string]gjson.Result
-	var digestSizes []int64
-	for _, s := range a.client.Manifests(repoPath, tag) {
-		var r map[string]gjson.Result = s.Map()
-		r["architecture"] = s.Get("platform.architecture")
-		r["os"] = s.Get("platform.os")
-		_, _, dInfo := a.client.TagInfo(repoPath, s.Get("digest").String(), false)
-		var dSize int64
-		for _, d := range gjson.Get(dInfo, "layers.#.size").Array() {
-			dSize = dSize + d.Int()
+	var digests []map[string]interface{}
+	for _, s := range manifests {
+		r, _ := gjson.Parse(s.String()).Value().(map[string]interface{})
+		if s.Get("mediaType").String() == "application/vnd.docker.distribution.manifest.v2+json" {
+			_, _, dInfo := a.client.TagInfo(repoPath, s.Get("digest").String(), false)
+			var dSize int64
+			for _, d := range gjson.Get(dInfo, "layers.#.size").Array() {
+				dSize = dSize + d.Int()
+			}
+			r["size"] = dSize
+		} else {
+			r["size"] = s.Get("size").Int()
 		}
-		digestSizes = append(digestSizes, dSize)
+		r["ordered_keys"] = registry.SortedMapKeys(r)
 		digests = append(digests, r)
 	}
 
@@ -265,14 +273,14 @@ func (a *apiClient) viewTagInfo(c echo.Context) error {
 	data.Set("sha256", sha256)
 	data.Set("imageSize", imageSize)
 	data.Set("tag", tag)
-	data.Set("repoPath", gjson.Get(infoV1, "name").String())
+	data.Set("repoPath", repoPath)
 	data.Set("created", gjson.Get(gjson.Get(infoV1, "history.0.v1Compatibility").String(), "created").String())
 	data.Set("layersCount", layersCount)
 	data.Set("layersV2", layersV2)
 	data.Set("layersV1", layersV1)
 	data.Set("isDigest", isDigest)
+	data.Set("isListOnly", isListOnly)
 	data.Set("digests", digests)
-	data.Set("digestSizes", digestSizes)
 
 	return c.Render(http.StatusOK, "tag_info.html", data)
 }
