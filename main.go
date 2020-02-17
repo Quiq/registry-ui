@@ -210,8 +210,14 @@ func (a *apiClient) viewTagInfo(c echo.Context) error {
 	}
 
 	sha256, infoV1, infoV2 := a.client.TagInfo(repoPath, tag, false)
-	if infoV1 == "" || infoV2 == "" {
+	manifests := a.client.Manifests(repoPath, tag)
+	if (infoV1 == "" || infoV2 == "") && len(manifests) == 0 {
 		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/%s/%s", a.config.BasePath, namespace, repo))
+	}
+	isListOnly := (infoV1 == "" && infoV2 == "")
+	newRepoPath := gjson.Get(infoV1, "name").String()
+	if newRepoPath != "" {
+		repoPath = newRepoPath
 	}
 
 	var imageSize int64
@@ -243,17 +249,38 @@ func (a *apiClient) viewTagInfo(c echo.Context) error {
 		layersCount = len(gjson.Get(infoV1, "fsLayers").Array())
 	}
 
+	isDigest := strings.HasPrefix(tag, "sha256:")
+	var digests []map[string]interface{}
+	for _, s := range manifests {
+		r, _ := gjson.Parse(s.String()).Value().(map[string]interface{})
+		if s.Get("mediaType").String() == "application/vnd.docker.distribution.manifest.v2+json" {
+			_, _, dInfo := a.client.TagInfo(repoPath, s.Get("digest").String(), false)
+			var dSize int64
+			for _, d := range gjson.Get(dInfo, "layers.#.size").Array() {
+				dSize = dSize + d.Int()
+			}
+			r["size"] = dSize
+		} else {
+			r["size"] = s.Get("size").Int()
+		}
+		r["ordered_keys"] = registry.SortedMapKeys(r)
+		digests = append(digests, r)
+	}
+
 	data := jet.VarMap{}
 	data.Set("namespace", namespace)
 	data.Set("repo", repo)
 	data.Set("sha256", sha256)
 	data.Set("imageSize", imageSize)
-	data.Set("tag", gjson.Get(infoV1, "tag").String())
-	data.Set("repoPath", gjson.Get(infoV1, "name").String())
+	data.Set("tag", tag)
+	data.Set("repoPath", repoPath)
 	data.Set("created", gjson.Get(gjson.Get(infoV1, "history.0.v1Compatibility").String(), "created").String())
 	data.Set("layersCount", layersCount)
 	data.Set("layersV2", layersV2)
 	data.Set("layersV1", layersV1)
+	data.Set("isDigest", isDigest)
+	data.Set("isListOnly", isListOnly)
+	data.Set("digests", digests)
 
 	return c.Render(http.StatusOK, "tag_info.html", data)
 }
