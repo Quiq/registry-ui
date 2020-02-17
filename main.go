@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/CloudyKit/jet"
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/quiq/docker-registry-ui/events"
 	"github.com/quiq/docker-registry-ui/registry"
 	"github.com/robfig/cron"

@@ -36,8 +36,14 @@ To preserve sqlite db file with event notifications data, add to the command:
 
     -v /local/data:/opt/data
 
+Ensure /local/data is owner by nobody (alpine user id is 65534).
+
 You can also run the container with `--read-only` option, however when using using event listener functionality
-you need to ensure the sqlite db can be written, i.e. mount a folder as listed above.
+you need to ensure the sqlite db can be written, i.e. mount a folder as listed above (rw mode).
+
+To run with a custom TZ:
+
+  -e TZ=America/Los_Angeles
 
 ## Configure event listener on Docker Registry
 

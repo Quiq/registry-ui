@@ -1,12 +1,9 @@
-FROM golang:1.12.7-alpine3.9 as builder
-
-ENV GOPATH /opt
-ENV GO111MODULE on
+FROM golang:1.13.7-alpine3.11 as builder
 
 RUN apk update && \
     apk add ca-certificates git bash gcc musl-dev
 
-WORKDIR /opt/src/github.com/quiq/docker-registry-ui
+WORKDIR /opt/src
 ADD events events
 ADD registry registry
 ADD *.go go.mod go.sum ./
@@ -15,11 +12,12 @@ RUN go test -v ./registry && \
     go build -o /opt/docker-registry-ui *.go
 
 
-FROM alpine:3.9
+FROM alpine:3.11
 
 WORKDIR /opt
-RUN apk add --no-cache ca-certificates && \
-    mkdir /opt/data
+RUN apk add --no-cache ca-certificates tzdata && \
+    mkdir /opt/data && \
+    chown nobody /opt/data
 
 ADD templates /opt/templates
 ADD static /opt/static
