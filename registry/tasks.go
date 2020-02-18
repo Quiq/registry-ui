@@ -5,7 +5,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/hhkbp2/go-logging"
+	"github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 )
 
@@ -36,7 +36,7 @@ func (p timeSlice) Swap(i, j int) {
 func PurgeOldTags(client *Client, purgeDryRun bool, purgeTagsKeepDays, purgeTagsKeepCount int) {
 	logger := SetupLogging("registry.tasks.PurgeOldTags")
 	// Reduce client logging.
-	client.logger.SetLevel(logging.LevelError)
+	client.logger.Logger.SetLevel(logrus.ErrorLevel)
 
 	dryRunText := ""
 	if purgeDryRun {

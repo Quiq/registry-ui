@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hhkbp2/go-logging"
 	"github.com/quiq/docker-registry-ui/registry"
+	"github.com/sirupsen/logrus"
 
 	// 🐒 patching of "database/sql".
 	_ "github.com/go-sql-driver/mysql"
@@ -37,7 +37,7 @@ type EventListener struct {
 	databaseLocation string
 	retention        int
 	eventDeletion    bool
-	logger           logging.Logger
+	logger           *logrus.Entry
 }
 
 type eventData struct {

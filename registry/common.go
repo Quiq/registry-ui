@@ -2,23 +2,24 @@ package registry
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"sort"
+	"time"
 
-	"github.com/hhkbp2/go-logging"
+	"github.com/sirupsen/logrus"
 )
 
-// SetupLogging configure logging.
-func SetupLogging(name string) logging.Logger {
-	logger := logging.GetLogger(name)
-	handler := logging.NewStdoutHandler()
-	format := "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-	dateFormat := "%Y-%m-%d %H:%M:%S"
-	formatter := logging.NewStandardFormatter(format, dateFormat)
-	handler.SetFormatter(formatter)
-	logger.SetLevel(logging.LevelInfo)
-	logger.AddHandler(handler)
-	return logger
+// SetupLogging setup logger
+func SetupLogging(name string) *logrus.Entry {
+	logrus.SetFormatter(&logrus.TextFormatter{
+		TimestampFormat: time.RFC3339,
+		FullTimestamp:   true,
+	})
+	// Output to stdout instead of the default stderr.
+	logrus.SetOutput(os.Stdout)
+
+	return logrus.WithFields(logrus.Fields{"logger": name})
 }
 
 // SortedMapKeys sort keys of the map where values can be of any type.
@@ -40,7 +41,12 @@ func PrettySize(size float64) string {
 		size = size / 1024
 		i = i + 1
 	}
-	return fmt.Sprintf("%.*f %s", 0, size, units[i])
+	// Format decimals as follow: 0 B, 0 KB, 0.0 MB, 0.00 GB
+	decimals := i - 1
+	if decimals < 0 {
+		decimals = 0
+	}
+	return fmt.Sprintf("%.*f %s", decimals, size, units[i])
 }
 
 // ItemInSlice check if item is an element of slice

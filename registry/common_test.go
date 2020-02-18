@@ -37,8 +37,8 @@ func TestPrettySize(t *testing.T) {
 			123:        "123 B",
 			23123:      "23 KB",
 			23923:      "23 KB",
-			723425120:  "690 MB",
-			8534241213: "8 GB",
+			723425120:  "689.9 MB",
+			8534241213: "7.95 GB",
 		}
 		for key, val := range input {
 			convey.So(PrettySize(key), convey.ShouldEqual, val)

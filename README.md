@@ -6,7 +6,8 @@
 
 * Web UI for Docker Registry 2.6+
 * Browse repositories and tags
-* Display Docker image details by layers including both manifests v1 and v2
+* Display image details by layers
+* Support Manifest v2 schema 1, Manifest v2 schema 2, Manifest List v2 schema 2 and their confusing combinations
 * Fast and small, written on Go
 * Automatically discover an authentication method (basic auth, token service etc.)
 * Caching the list of repositories, tag counts and refreshing in background
@@ -43,7 +44,7 @@ you need to ensure the sqlite db can be written, i.e. mount a folder as listed a
 
 To run with a custom TZ:
 
-  -e TZ=America/Los_Angeles
+    -e TZ=America/Los_Angeles
 
 ## Configure event listener on Docker Registry
 
@@ -109,6 +110,16 @@ Note, the cron schedule format includes seconds! See https://godoc.org/github.co
 ### Debug mode
 
 To increase http request verbosity, run container with `-e GOREQUEST_DEBUG=1`.
+
+### About Docker image formats...
+
+Docker image formats and their confusing combinations as supported by this UI:
+
+* Manifest v2 schema 1 only: older format, e.g. created with Docker 1.9.
+* Manifest v2 schema 1 + Manifest v2 schema 2: current format of a single image, the image history are coming from schema 1, should be referenced by repo:tag name.
+* Manifest v2 schema 1 + Manifest List v2 schema 2: multi-arch image format containing digests of sub-images, the image history are coming from schema 1 (no idea from what sub-image it was picked up when created), should be referenced by repo:tag name.
+* Manifest v2 schema 2: current image format referenced by its digest sha256, no image history.
+* Manifest List v2 schema 2: multi-arch image format referenced by its digest sha256, no image history.
 
 ### Screenshots
 
