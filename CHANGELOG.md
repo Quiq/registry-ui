@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.9.0 (2020-02-19) - unreleased
+### 0.9.0 (2020-02-19)
 
 * Upgrade Go version to 1.13.7, alpine to 3.11 and other dependencies.
 * Support Manifest List v2. This enables the proper display of multi-arch images,
