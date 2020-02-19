@@ -106,8 +106,14 @@ func (c *Client) getToken(scope string) string {
 		return ""
 	}
 
-	c.tokens[scope] = gjson.Get(data, "token").String()
-	c.logger.Info("Received new token for scope ", scope)
+	token := gjson.Get(data, "token").String()
+	// Fix for docker_auth v1.5.0 only
+	if token == "" {
+		token = gjson.Get(data, "access_token").String()
+	}
+
+	c.tokens[scope] = token
+	c.logger.Debugf("Received new token for scope %s", scope)
 
 	return c.tokens[scope]
 }

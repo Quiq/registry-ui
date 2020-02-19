@@ -13,6 +13,7 @@
   (thanks to @gminog).
 * Fix initial ownership of /opt/data dir in Dockerfile.
 * Hide repositories with 0 tags count.
+* Compatibility fix with docker_auth v1.5.0.
 
 ### 0.8.2 (2019-07-30)
 
