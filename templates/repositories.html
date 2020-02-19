@@ -56,10 +56,12 @@
     </thead>
     <tbody>
         {{range repo := repos}}
+            {{if !isset(tagCounts[namespace+"/"+repo]) || (isset(tagCounts[namespace+"/"+repo]) && tagCounts[namespace+"/"+repo] > 0)}}
             <tr>
                 <td><a href="{{ basePath }}/{{ namespace }}/{{ repo|url }}">{{ repo }}</a></td>
                 <td>{{ tagCounts[namespace+"/"+repo] }}</td>
             </tr>
+            {{end}}
         {{end}}
     </tbody>
 </table>

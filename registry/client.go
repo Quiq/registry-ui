@@ -302,6 +302,11 @@ func (c *Client) DeleteTag(repo, tag string) {
 		c.logger.Error(errs[0])
 	} else {
 		// Returns 202 on success.
+		if !strings.Contains(repo, "/") {
+			c.tagCounts["library/"+repo]--
+		} else {
+			c.tagCounts[repo]--
+		}
 		c.logger.Infof("DELETE %s (tag:%s) %s", uri, tag, resp.Status)
 	}
 }
