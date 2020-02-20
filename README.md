@@ -119,7 +119,7 @@ Docker image formats and their confusing combinations as supported by this UI:
 * Manifest v2 schema 1 + Manifest v2 schema 2: current format of a single image, the image history are coming from schema 1, should be referenced by repo:tag name.
 * Manifest v2 schema 1 + Manifest List v2 schema 2: multi-arch image format containing digests of sub-images, the image history are coming from schema 1 (no idea from what sub-image it was picked up when created), should be referenced by repo:tag name.
 * Manifest v2 schema 2: current image format referenced by its digest sha256, no image history.
-* Manifest List v2 schema 2: multi-arch image format referenced by its digest sha256, no image history.
+* Manifest List v2 schema 2: multi-arch image referenced by its digest sha256 or cache image referenced by tag name, no image history.
 
 ### Screenshots
 

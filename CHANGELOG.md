@@ -1,5 +1,9 @@
 ## Changelog
 
+### 0.9.1 (2020-02-20)
+
+* Minor amendments for the tag info page to account the cache type of sub-image.
+
 ### 0.9.0 (2020-02-19)
 
 * Upgrade Go version to 1.13.7, alpine to 3.11 and other dependencies.

@@ -20,12 +20,12 @@
         </tr>
     </thead>
     <tr>
-        <td width="20%"><b>Image URL</b></td><td>{{ registryHost }}/{{ repoPath }}{{if isDigest}}@{{else}}:{{end}}{{ tag }}</td>
+        <td width="20%"><b>Image URL</b></td><td>{{ registryHost }}/{{ repoPath }}{{ isDigest ? "@" : ":" }}{{ tag }}</td>
     </tr>
     <tr>
         <td><b>Digest</b></td><td>sha256:{{ sha256 }}</td>
     </tr>
-    {{if not isDigest}}
+    {{if created}}
     <tr>
         <td><b>Created On</b></td><td>{{ created|pretty_time }}</td>
     </tr>
@@ -48,7 +48,7 @@
 </table>
 
 {{if digestList}}
-<h4>Multi-arch Sub-images <!-- Manifest List v2 schema 2 --></h4>
+<h4>Sub-images <!-- Manifest List v2 schema 2: multi-arch or cache image --></h4>
 {{range index, manifest := digestList}}
 <table class="table table-striped table-bordered">
     <thead bgcolor="#ddd">
@@ -68,10 +68,8 @@
         </td>
         {{else if key == "size"}}
         <td>{{ manifest[key]|pretty_size }}</td>
-        {{else if key == "digest"}}
-        <td><a href="{{ basePath }}/{{ namespace }}/{{ repo }}/{{ manifest["digest"] }}">{{ manifest["digest"] }}</a></td>
         {{else}}
-        <td>{{ manifest[key] }}</td>
+        <td>{{ manifest[key]|raw }}</td>
         {{end}}
     </tr>
     {{end}}

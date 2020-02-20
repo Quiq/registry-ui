@@ -263,21 +263,26 @@ func (a *apiClient) viewTagInfo(c echo.Context) error {
 		layersCount = len(gjson.Get(infoV1, "fsLayers").Array())
 	}
 
-	// Gather sub-image info of multi-arch image
+	// Gather sub-image info of multi-arch or cache image
 	var digestList []map[string]interface{}
 	for _, s := range manifests {
 		r, _ := gjson.Parse(s.String()).Value().(map[string]interface{})
 		if s.Get("mediaType").String() == "application/vnd.docker.distribution.manifest.v2+json" {
+			// Sub-image of the specific arch.
 			_, dInfoV1, _ := a.client.TagInfo(repoPath, s.Get("digest").String(), true)
 			var dSize int64
 			for _, d := range gjson.Get(dInfoV1, "layers.#.size").Array() {
 				dSize = dSize + d.Int()
 			}
 			r["size"] = dSize
+			// Create link here because there is a bug with jet template when referencing a value by map key in the "if" condition under "range".
+			if r["mediaType"] == "application/vnd.docker.distribution.manifest.v2+json" {
+				r["digest"] = fmt.Sprintf(`<a href="%s/%s/%s/%s">%s</a>`, a.config.BasePath, namespace, repo, r["digest"], r["digest"])
+			}
 		} else {
+			// Sub-image of the cache type.
 			r["size"] = s.Get("size").Int()
 		}
-		delete(r, "mediaType")
 		r["ordered_keys"] = registry.SortedMapKeys(r)
 		digestList = append(digestList, r)
 	}
