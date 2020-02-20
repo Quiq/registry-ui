@@ -4,9 +4,10 @@
 
 ### Overview
 
-* Web UI for Docker Registry 2.6+
-* Browse repositories and tags
+* Web UI for Docker Registry
+* Browse namespaces, repositories and tags
 * Display image details by layers
+* Display sub-images of multi-arch or cache type of image
 * Support Manifest v2 schema 1, Manifest v2 schema 2, Manifest List v2 schema 2 and their confusing combinations
 * Fast and small, written on Go
 * Automatically discover an authentication method (basic auth, token service etc.)
@@ -123,6 +124,18 @@ Docker image formats and their confusing combinations as supported by this UI:
 
 ### Screenshots
 
+Repository list / home page:
+
 ![image](screenshots/1.png)
 
+Repository tag list:
+
 ![image](screenshots/2.png)
+
+Tag info page:
+
+![image](screenshots/3.png)
+
+Event log page:
+
+![image](screenshots/4.png)
