@@ -152,6 +152,11 @@ func (c *Client) callRegistry(uri, scope, manifestFormat string) (string, gorequ
 	return data, resp
 }
 
+func (c *Client) InvalidateCache() {
+	c.logger.Info("Cache invalidated")
+	c.repos = []string{}
+}
+
 func (c *Client) RepositoriesList(useCache bool) []string {
 	// Return from cache if available.
 	if len(c.repos) > 0 && useCache {

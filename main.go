@@ -170,6 +170,7 @@ func main() {
 	e.GET(a.config.BasePath+"/", a.dispatchRequest)
 	e.GET(a.config.BasePath+"/*", a.dispatchRequest)
 	e.GET(a.config.BasePath+"/events", a.viewLog)
+	e.GET(a.config.BasePath+"/invalidate_cache", a.invalidateCache)
 
 	// Protected event listener.
 	p := e.Group(a.config.BasePath + "/api")
@@ -206,6 +207,11 @@ func (a *apiClient) dispatchRequest(c echo.Context) error {
 	} else {
 		return a.listRepo(c, path)
 	}
+}
+
+func (a *apiClient) invalidateCache(c echo.Context) error {
+	a.client.InvalidateCache()
+	return c.Redirect(http.StatusSeeOther, a.config.BasePath+"/")
 }
 
 func (a *apiClient) listRepo(c echo.Context, repoPath string) error {
