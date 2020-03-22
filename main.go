@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/CloudyKit/jet"
@@ -50,6 +51,21 @@ type apiClient struct {
 	client        *registry.Client
 	eventListener *events.EventListener
 	config        configData
+}
+
+type breadCrumb struct {
+	segment string
+	path    string
+}
+
+func getBreadCrumbs(path string) []breadCrumb {
+	ret := []breadCrumb{}
+	segments := strings.Split(path, "/")
+	for i := 0; i < len(segments); i++ {
+		e := breadCrumb{segment: segments[i], path: strings.Join(segments[0:i+1], "/")}
+		ret = append(ret, e)
+	}
+	return ret
 }
 
 func main() {
@@ -149,13 +165,10 @@ func main() {
 	e.File("/favicon.ico", "static/favicon.ico")
 	e.Static(a.config.BasePath+"/static", "static")
 	if a.config.BasePath != "" {
-		e.GET(a.config.BasePath, a.viewRepositories)
+		e.GET(a.config.BasePath, a.dispatchRequest)
 	}
-	e.GET(a.config.BasePath+"/", a.viewRepositories)
-	e.GET(a.config.BasePath+"/:namespace", a.viewRepositories)
-	e.GET(a.config.BasePath+"/:namespace/:repo", a.viewTags)
-	e.GET(a.config.BasePath+"/:namespace/:repo/:tag", a.viewTagInfo)
-	e.GET(a.config.BasePath+"/:namespace/:repo/:tag/delete", a.deleteTag)
+	e.GET(a.config.BasePath+"/", a.dispatchRequest)
+	e.GET(a.config.BasePath+"/*", a.dispatchRequest)
 	e.GET(a.config.BasePath+"/events", a.viewLog)
 
 	// Protected event listener.
@@ -170,58 +183,65 @@ func main() {
 	e.Logger.Fatal(e.Start(a.config.ListenAddr))
 }
 
-func (a *apiClient) viewRepositories(c echo.Context) error {
-	namespace := c.Param("namespace")
-	if namespace == "" {
-		namespace = "library"
+func (a *apiClient) dispatchRequest(c echo.Context) error {
+	path := c.Request().URL.Path
+	if strings.HasPrefix(path, a.config.BasePath) {
+		path = path[len(a.config.BasePath):]
+	}
+	if strings.HasPrefix(path, "/") {
+		path = path[1:]
 	}
 
-	repos, _ := a.client.Repositories(true)[namespace]
-	data := jet.VarMap{}
-	data.Set("namespace", namespace)
-	data.Set("namespaces", a.client.Namespaces())
-	data.Set("repos", repos)
-	data.Set("tagCounts", a.client.TagCounts())
-
-	return c.Render(http.StatusOK, "repositories.html", data)
+	segments := strings.Split(path, "/")
+	manifestRequest, _ := regexp.MatchString(".*/manifests/[^/]*$", path)
+	manifestDeleteRequest, _ := regexp.MatchString(".*/manifests/[^/]*/delete$", path)
+	if manifestRequest {
+		repoPath := strings.Join(segments[0:len(segments)-2], "/")
+		tagName := segments[len(segments)-1]
+		return a.viewTagInfo(c, repoPath, tagName)
+	} else if manifestDeleteRequest {
+		repoPath := strings.Join(segments[0:len(segments)-3], "/")
+		tagName := segments[len(segments)-2]
+		return a.deleteTag(c, repoPath, tagName)
+	} else {
+		return a.listRepo(c, path)
+	}
 }
 
-func (a *apiClient) viewTags(c echo.Context) error {
-	namespace := c.Param("namespace")
-	repo := c.Param("repo")
-	repoPath := repo
-	if namespace != "library" {
-		repoPath = fmt.Sprintf("%s/%s", namespace, repo)
-	}
-
+func (a *apiClient) listRepo(c echo.Context, repoPath string) error {
 	tags := a.client.Tags(repoPath)
+	repos := a.client.RepositoriesList(true)
+
+	filterExpression := repoPath
+	if !strings.HasSuffix(repoPath, "/") && repoPath != "" {
+		filterExpression += "/"
+	}
+	matching_repos := registry.FilterStringSlice(repos, func(s string) bool {
+		return strings.HasPrefix(s, filterExpression) && len(s) > len(repoPath)
+	})
 	deleteAllowed := a.checkDeletePermission(c.Request().Header.Get("X-WEBAUTH-USER"))
 
 	data := jet.VarMap{}
-	data.Set("namespace", namespace)
-	data.Set("repo", repo)
+	data.Set("repoPath", repoPath)
+	data.Set("breadCrumbs", getBreadCrumbs(repoPath))
 	data.Set("tags", tags)
+	data.Set("repos", matching_repos)
 	data.Set("deleteAllowed", deleteAllowed)
+	data.Set("tagCounts", a.client.TagCounts())
 	repoPath, _ = url.PathUnescape(repoPath)
 	data.Set("events", a.eventListener.GetEvents(repoPath))
 
-	return c.Render(http.StatusOK, "tags.html", data)
+	return c.Render(http.StatusOK, "list.html", data)
 }
 
-func (a *apiClient) viewTagInfo(c echo.Context) error {
-	namespace := c.Param("namespace")
-	repo := c.Param("repo")
-	tag := c.Param("tag")
-	repoPath := repo
-	if namespace != "library" {
-		repoPath = fmt.Sprintf("%s/%s", namespace, repo)
-	}
+func (a *apiClient) viewTagInfo(c echo.Context, repoPath string, tag string) error {
+	repo := repoPath
 
 	// Retrieve full image info from various versions of manifests
 	sha256, infoV1, infoV2 := a.client.TagInfo(repoPath, tag, false)
 	sha256list, manifests := a.client.ManifestList(repoPath, tag)
 	if (infoV1 == "" || infoV2 == "") && len(manifests) == 0 {
-		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/%s/%s", a.config.BasePath, namespace, repo))
+		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/%s", a.config.BasePath, repo))
 	}
 
 	created := gjson.Get(gjson.Get(infoV1, "history.0.v1Compatibility").String(), "created").String()
@@ -277,7 +297,7 @@ func (a *apiClient) viewTagInfo(c echo.Context) error {
 			r["size"] = dSize
 			// Create link here because there is a bug with jet template when referencing a value by map key in the "if" condition under "range".
 			if r["mediaType"] == "application/vnd.docker.distribution.manifest.v2+json" {
-				r["digest"] = fmt.Sprintf(`<a href="%s/%s/%s/%s">%s</a>`, a.config.BasePath, namespace, repo, r["digest"], r["digest"])
+				r["digest"] = fmt.Sprintf(`<a href="%s/%s/%s">%s</a>`, a.config.BasePath, repo, r["digest"], r["digest"])
 			}
 		} else {
 			// Sub-image of the cache type.
@@ -289,10 +309,10 @@ func (a *apiClient) viewTagInfo(c echo.Context) error {
 
 	// Populate template vars
 	data := jet.VarMap{}
-	data.Set("namespace", namespace)
 	data.Set("repo", repo)
 	data.Set("tag", tag)
 	data.Set("repoPath", repoPath)
+	data.Set("breadCrumbs", getBreadCrumbs(repoPath))
 	data.Set("sha256", sha256)
 	data.Set("imageSize", imageSize)
 	data.Set("created", created)
@@ -305,20 +325,12 @@ func (a *apiClient) viewTagInfo(c echo.Context) error {
 	return c.Render(http.StatusOK, "tag_info.html", data)
 }
 
-func (a *apiClient) deleteTag(c echo.Context) error {
-	namespace := c.Param("namespace")
-	repo := c.Param("repo")
-	tag := c.Param("tag")
-	repoPath := repo
-	if namespace != "library" {
-		repoPath = fmt.Sprintf("%s/%s", namespace, repo)
-	}
-
+func (a *apiClient) deleteTag(c echo.Context, repoPath string, tag string) error {
 	if a.checkDeletePermission(c.Request().Header.Get("X-WEBAUTH-USER")) {
 		a.client.DeleteTag(repoPath, tag)
 	}
 
-	return c.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/%s/%s", a.config.BasePath, namespace, repo))
+	return c.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/%s", a.config.BasePath, repoPath))
 }
 
 // checkDeletePermission check if tag deletion is allowed whether by anyone or permitted users.

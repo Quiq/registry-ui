@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"regexp"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -27,7 +26,7 @@ type Client struct {
 	logger    *logrus.Entry
 	mux       sync.Mutex
 	tokens    map[string]string
-	repos     map[string][]string
+	repos     []string
 	tagCounts map[string]int
 	authURL   string
 }
@@ -43,7 +42,7 @@ func NewClient(url string, verifyTLS bool, username, password string) *Client {
 		request:   gorequest.New().TLSClientConfig(&tls.Config{InsecureSkipVerify: !verifyTLS}),
 		logger:    SetupLogging("registry.client"),
 		tokens:    map[string]string{},
-		repos:     map[string][]string{},
+		repos:     []string{},
 		tagCounts: map[string]int{},
 	}
 	resp, _, errs := c.request.Get(c.url+"/v2/").
@@ -153,21 +152,7 @@ func (c *Client) callRegistry(uri, scope, manifestFormat string) (string, gorequ
 	return data, resp
 }
 
-// Namespaces list repo namespaces.
-func (c *Client) Namespaces() []string {
-	namespaces := make([]string, 0, len(c.repos))
-	for k := range c.repos {
-		namespaces = append(namespaces, k)
-	}
-	if !ItemInSlice("library", namespaces) {
-		namespaces = append(namespaces, "library")
-	}
-	sort.Strings(namespaces)
-	return namespaces
-}
-
-// Repositories list repos by namespaces where 'library' is the default one.
-func (c *Client) Repositories(useCache bool) map[string][]string {
+func (c *Client) RepositoriesList(useCache bool) []string {
 	// Return from cache if available.
 	if len(c.repos) > 0 && useCache {
 		return c.repos
@@ -179,7 +164,7 @@ func (c *Client) Repositories(useCache bool) map[string][]string {
 	linkRegexp := regexp.MustCompile("^<(.*?)>;.*$")
 	scope := "registry:catalog:*"
 	uri := "/v2/_catalog"
-	c.repos = map[string][]string{}
+	c.repos = []string{}
 	for {
 		data, resp := c.callRegistry(uri, scope, "manifest.v2")
 		if data == "" {
@@ -187,14 +172,7 @@ func (c *Client) Repositories(useCache bool) map[string][]string {
 		}
 
 		for _, r := range gjson.Get(data, "repositories").Array() {
-			namespace := "library"
-			repo := r.String()
-			if strings.Contains(repo, "/") {
-				f := strings.SplitN(repo, "/", 2)
-				namespace = f[0]
-				repo = f[1]
-			}
-			c.repos[namespace] = append(c.repos[namespace], repo)
+			c.repos = append(c.repos, r.String())
 		}
 
 		// pagination
@@ -274,15 +252,9 @@ func (c *Client) CountTags(interval uint8) {
 	for {
 		start := time.Now()
 		c.logger.Info("[CountTags] Calculating image tags...")
-		catalog := c.Repositories(false)
-		for n, repos := range catalog {
-			for _, r := range repos {
-				repoPath := r
-				if n != "library" {
-					repoPath = fmt.Sprintf("%s/%s", n, r)
-				}
-				c.tagCounts[fmt.Sprintf("%s/%s", n, r)] = len(c.Tags(repoPath))
-			}
+		catalog := c.RepositoriesList(false)
+		for _, repoPath := range catalog {
+			c.tagCounts[repoPath] = len(c.Tags(repoPath))
 		}
 		c.logger.Infof("[CountTags] Job complete (%v).", time.Now().Sub(start))
 		time.Sleep(time.Duration(interval) * time.Minute)
@@ -307,10 +279,7 @@ func (c *Client) DeleteTag(repo, tag string) {
 	if len(errs) > 0 {
 		c.logger.Error(errs[0])
 	} else {
-		// Returns 202 on success.
-		if !strings.Contains(repo, "/") {
-			c.tagCounts["library/"+repo]--
-		} else {
+		if c.tagCounts[repo] > 0 {
 			c.tagCounts[repo]--
 		}
 		c.logger.Infof("DELETE %s (tag:%s) %s", uri, tag, resp.Status)

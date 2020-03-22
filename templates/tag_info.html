@@ -5,11 +5,10 @@
 {{block body()}}
 <ol class="breadcrumb">
     <li><a href="{{ basePath }}/">{{ registryHost }}</a></li>
-    {{if namespace != "library"}}
-    <li><a href="{{ basePath }}/{{ namespace }}">{{ namespace }}</a></li>
+    {{range crumb := breadCrumbs}}
+    <li><a href="{{ basePath }}/{{ crumb.path }}">{{ crumb.segment }}</a></li>
     {{end}}
-    <li><a href="{{ basePath }}/{{ namespace }}/{{ repo }}">{{ repo|url_decode }}</a></li>
-    <li class="active">{{ tag }}</li>
+    <li><a href="{{ basePath }}/{{ repoPath }}/manifests/{{ tag }}">{{ tag }}</a></li>
 </ol>
 
 <h4>Image Details</h4>

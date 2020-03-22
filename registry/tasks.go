@@ -44,40 +44,31 @@ func PurgeOldTags(client *Client, purgeDryRun bool, purgeTagsKeepDays, purgeTags
 		dryRunText = "skipped"
 	}
 	logger.Info("Scanning registry for repositories, tags and their creation dates...")
-	catalog := client.Repositories(true)
-	// catalog := map[string][]string{"library": []string{""}}
+	catalog := client.RepositoriesList(true)
 	now := time.Now().UTC()
 	repos := map[string]timeSlice{}
-	count := 0
-	for namespace := range catalog {
-		count = count + len(catalog[namespace])
-		for _, repo := range catalog[namespace] {
-			if namespace != "library" {
-				repo = fmt.Sprintf("%s/%s", namespace, repo)
-			}
-
-			tags := client.Tags(repo)
-			logger.Infof("[%s] scanning %d tags...", repo, len(tags))
-			if len(tags) == 0 {
+	for _, repo := range catalog {
+		tags := client.Tags(repo)
+		logger.Infof("[%s] scanning %d tags...", repo, len(tags))
+		if len(tags) == 0 {
+			continue
+		}
+		for _, tag := range tags {
+			_, infoV1, _ := client.TagInfo(repo, tag, true)
+			if infoV1 == "" {
+				logger.Errorf("[%s] missing manifest v1 for tag %s", repo, tag)
 				continue
 			}
-			for _, tag := range tags {
-				_, infoV1, _ := client.TagInfo(repo, tag, true)
-				if infoV1 == "" {
-					logger.Errorf("[%s] missing manifest v1 for tag %s", repo, tag)
-					continue
-				}
-				created := gjson.Get(gjson.Get(infoV1, "history.0.v1Compatibility").String(), "created").Time()
-				repos[repo] = append(repos[repo], tagData{name: tag, created: created})
-			}
+			created := gjson.Get(gjson.Get(infoV1, "history.0.v1Compatibility").String(), "created").Time()
+			repos[repo] = append(repos[repo], tagData{name: tag, created: created})
 		}
 	}
 
-	logger.Infof("Scanned %d repositories.", count)
+	logger.Infof("Scanned %d repositories.", len(catalog))
 	logger.Info("Filtering out tags for purging...")
 	purgeTags := map[string][]string{}
 	keepTags := map[string][]string{}
-	count = 0
+	count := 0
 	for _, repo := range SortedMapKeys(repos) {
 		// Sort tags by "created" from newest to oldest.
 		sortedTags := make(timeSlice, 0, len(repos[repo]))

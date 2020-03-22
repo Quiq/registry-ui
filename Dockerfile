@@ -6,8 +6,11 @@ RUN apk update && \
 WORKDIR /opt/src
 ADD events events
 ADD registry registry
-ADD *.go go.mod go.sum ./
 
+ADD go.mod go.sum ./
+RUN go mod download
+
+ADD *.go ./
 RUN go test -v ./registry && \
     go build -o /opt/docker-registry-ui *.go
 
