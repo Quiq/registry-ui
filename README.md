@@ -47,6 +47,20 @@ To run with a custom TZ:
 
     -e TZ=America/Los_Angeles
 
+### Run UI in K8S
+
+For first fill config.yml with your values and create secret:
+
+    kubectl create secret generic docker-registry-ui-conf --from-file=config.yml=./config.yml
+
+Then deploy app:
+
+    kubectl apply -f k8s-docker-registry-ui.yaml
+
+After it you can access to UI via port forwarding:
+
+    kubectl port-forward svc/docker-registry-ui 8000
+ 
 ## Configure event listener on Docker Registry
 
 To receive events you need to configure Registry as follow:

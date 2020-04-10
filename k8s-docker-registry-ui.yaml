@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: docker-registry-ui
+spec:
+  ports:
+  - port: 8000
+    targetPort: 8000
+  selector:
+    app: docker-registry-ui
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docker-registry-ui
+spec:
+  selector:
+    matchLabels:
+      app: docker-registry-ui
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: docker-registry-ui
+    spec:
+      containers:
+      - name: docker-registry-ui
+        image: quiq/docker-registry-ui:latest
+        command: ['/opt/docker-registry-ui']
+        args: ['-config-file=/opt/conf/config.yml']
+        ports:
+        - containerPort: 8000
+        volumeMounts:
+          - name: docker-registry-ui-conf
+            mountPath: /opt/conf
+            readOnly: true
+      volumes:
+        - name: docker-registry-ui-conf
+          secret:
+            secretName: docker-registry-ui-conf
