@@ -178,7 +178,7 @@ func (c *Client) Repositories(useCache bool) map[string][]string {
 
 	linkRegexp := regexp.MustCompile("^<(.*?)>;.*$")
 	scope := "registry:catalog:*"
-	uri := "/v2/_catalog"
+	uri := "/v2/_catalog?n=1000"
 	c.repos = map[string][]string{}
 	for {
 		data, resp := c.callRegistry(uri, scope, "manifest.v2")
