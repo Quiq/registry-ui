@@ -5,7 +5,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 )
 
@@ -35,9 +34,6 @@ func (p timeSlice) Swap(i, j int) {
 // PurgeOldTags purge old tags.
 func PurgeOldTags(client *Client, purgeDryRun bool, purgeTagsKeepDays, purgeTagsKeepCount int) {
 	logger := SetupLogging("registry.tasks.PurgeOldTags")
-	// Reduce client logging.
-	client.logger.Logger.SetLevel(logrus.ErrorLevel)
-
 	dryRunText := ""
 	if purgeDryRun {
 		logger.Warn("Dry-run mode enabled.")
