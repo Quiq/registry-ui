@@ -14,14 +14,14 @@ func TestSortedMapKeys(t *testing.T) {
 		"zoo": "bar",
 	}
 	b := map[string]timeSlice{
-		"zoo": []tagData{tagData{name: "1", created: time.Now()}},
-		"abc": []tagData{tagData{name: "1", created: time.Now()}},
-		"foo": []tagData{tagData{name: "1", created: time.Now()}},
+		"zoo": []tagData{{name: "1", created: time.Now()}},
+		"abc": []tagData{{name: "1", created: time.Now()}},
+		"foo": []tagData{{name: "1", created: time.Now()}},
 	}
 	c := map[string][]string{
-		"zoo": []string{"1", "2"},
-		"foo": []string{"1", "2"},
-		"abc": []string{"1", "2"},
+		"zoo": {"1", "2"},
+		"foo": {"1", "2"},
+		"abc": {"1", "2"},
 	}
 	expect := []string{"abc", "foo", "zoo"}
 	convey.Convey("Sort map keys", t, func() {
