@@ -1,5 +1,10 @@
 ## Changelog
 
+### 0.9.2 (2020-07-10)
+
+* Upgrade Go version to 1.14.4, alpine to 3.12 and other dependencies.
+* Enable default logging for purge tags task.
+
 ### 0.9.1 (2020-02-20)
 
 * Minor amendments for the tag info page to account the cache type of sub-image.
