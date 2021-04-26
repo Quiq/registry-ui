@@ -293,7 +293,11 @@ func (c *Client) CountTags(interval uint8) {
 func (c *Client) DeleteTag(repo, tag string) {
 	scope := fmt.Sprintf("repository:%s:*", repo)
 	// Get sha256 digest for tag.
-	_, resp := c.callRegistry(fmt.Sprintf("/v2/%s/manifests/%s", repo, tag), scope, "manifest.v2")
+	_, resp := c.callRegistry(fmt.Sprintf("/v2/%s/manifests/%s", repo, tag), scope, "manifest.list.v2")
+
+	if resp.Header.Get("Content-Type") != "application/vnd.docker.distribution.manifest.list.v2+json" {
+		_, resp = c.callRegistry(fmt.Sprintf("/v2/%s/manifests/%s", repo, tag), scope, "manifest.v2")
+	}
 
 	// Delete by manifest digest reference.
 	authHeader := ""
