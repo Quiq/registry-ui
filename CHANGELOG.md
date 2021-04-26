@@ -1,5 +1,10 @@
 ## Changelog
 
+### 0.9.3 (2021-04-26)
+
+* Upgrade Go version to 1.16.3, alpine to 3.13 and other dependencies.
+* Support deletion of manifest lists.
+
 ### 0.9.2 (2020-07-10)
 
 * Upgrade Go version to 1.14.4, alpine to 3.12 and other dependencies.
