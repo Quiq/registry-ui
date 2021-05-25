@@ -14,9 +14,11 @@
             <div style="float: left">
                 <h2><a href="{{ basePath }}/" style="text-decoration: none">Docker Registry UI</a></h2>
             </div>
+            {{if eventsAllowed}}
             <div style="float: right">
                 <h4><a href="{{ basePath }}/events">Event Log</a></h4>
             </div>
+            {{end}}
             <div style="clear: both"></div>
 
             {{yield body()}}

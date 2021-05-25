@@ -35,6 +35,7 @@ type configData struct {
 	EventDeletionEnabled  bool     `yaml:"event_deletion_enabled"`
 	CacheRefreshInterval  uint8    `yaml:"cache_refresh_interval"`
 	AnyoneCanDelete       bool     `yaml:"anyone_can_delete"`
+	AnyoneCanViewEvents   bool     `yaml:"anyone_can_view_events"`
 	Admins                []string `yaml:"admins"`
 	Debug                 bool     `yaml:"debug"`
 	PurgeTagsKeepDays     int      `yaml:"purge_tags_keep_days"`
@@ -177,7 +178,7 @@ func (a *apiClient) viewRepositories(c echo.Context) error {
 	}
 
 	repos, _ := a.client.Repositories(true)[namespace]
-	data := jet.VarMap{}
+	data := a.dataWithPermissions(c)
 	data.Set("namespace", namespace)
 	data.Set("namespaces", a.client.Namespaces())
 	data.Set("repos", repos)
@@ -195,13 +196,11 @@ func (a *apiClient) viewTags(c echo.Context) error {
 	}
 
 	tags := a.client.Tags(repoPath)
-	deleteAllowed := a.checkDeletePermission(c.Request().Header.Get("X-WEBAUTH-USER"))
 
-	data := jet.VarMap{}
+	data := a.dataWithPermissions(c)
 	data.Set("namespace", namespace)
 	data.Set("repo", repo)
 	data.Set("tags", tags)
-	data.Set("deleteAllowed", deleteAllowed)
 	repoPath, _ = url.PathUnescape(repoPath)
 	data.Set("events", a.eventListener.GetEvents(repoPath))
 
@@ -288,7 +287,7 @@ func (a *apiClient) viewTagInfo(c echo.Context) error {
 	}
 
 	// Populate template vars
-	data := jet.VarMap{}
+	data := a.dataWithPermissions(c)
 	data.Set("namespace", namespace)
 	data.Set("repo", repo)
 	data.Set("tag", tag)
@@ -321,6 +320,19 @@ func (a *apiClient) deleteTag(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/%s/%s", a.config.BasePath, namespace, repo))
 }
 
+// dataWithPermissions returns a jet.VarMap with permission related information
+// set
+func (a *apiClient) dataWithPermissions(c echo.Context) jet.VarMap {
+	user := c.Request().Header.Get("X-WEBAUTH-USER")
+
+	data := jet.VarMap{}
+	data.Set("user", user)
+	data.Set("deleteAllowed", a.checkDeletePermission(user))
+	data.Set("eventsAllowed", a.checkEventsPermission(user))
+
+	return data
+}
+
 // checkDeletePermission check if tag deletion is allowed whether by anyone or permitted users.
 func (a *apiClient) checkDeletePermission(user string) bool {
 	deleteAllowed := a.config.AnyoneCanDelete
@@ -335,9 +347,24 @@ func (a *apiClient) checkDeletePermission(user string) bool {
 	return deleteAllowed
 }
 
+// checkEventsPermission checks if anyone is allowed to view events or only
+// admins
+func (a *apiClient) checkEventsPermission(user string) bool {
+	eventsAllowed := a.config.AnyoneCanViewEvents
+	if !eventsAllowed {
+		for _, u := range a.config.Admins {
+			if u == user {
+				eventsAllowed = true
+				break
+			}
+		}
+	}
+	return eventsAllowed
+}
+
 // viewLog view events from sqlite.
 func (a *apiClient) viewLog(c echo.Context) error {
-	data := jet.VarMap{}
+	data := a.dataWithPermissions(c)
 	data.Set("events", a.eventListener.GetEvents(""))
 
 	return c.Render(http.StatusOK, "event_log.html", data)
