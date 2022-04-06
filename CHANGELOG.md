@@ -1,5 +1,10 @@
 ## Changelog
 
+### 0.9.4 (2022-04-06)
+
+* Upgrade Go version to 1.18.0, alpine to 3.15 and other dependencies.
+* Build docker image with ARM support.
+
 ### 0.9.3 (2021-04-26)
 
 * Upgrade Go version to 1.16.3, alpine to 3.13 and other dependencies.
