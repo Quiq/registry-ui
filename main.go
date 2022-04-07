@@ -39,6 +39,7 @@ type configData struct {
 	Debug                 bool     `yaml:"debug"`
 	PurgeTagsKeepDays     int      `yaml:"purge_tags_keep_days"`
 	PurgeTagsKeepCount    int      `yaml:"purge_tags_keep_count"`
+	PurgeTagsKeepRegexp   string   `yaml:"purge_tags_keep_regexp"`
 	PurgeTagsSchedule     string   `yaml:"purge_tags_schedule"`
 }
 
@@ -351,5 +352,5 @@ func (a *apiClient) receiveEvents(c echo.Context) error {
 
 // purgeOldTags purges old tags.
 func (a *apiClient) purgeOldTags(dryRun bool) {
-	registry.PurgeOldTags(a.client, dryRun, a.config.PurgeTagsKeepDays, a.config.PurgeTagsKeepCount)
+	registry.PurgeOldTags(a.client, dryRun, a.config.PurgeTagsKeepDays, a.config.PurgeTagsKeepCount, a.config.PurgeTagsKeepRegexp)
 }

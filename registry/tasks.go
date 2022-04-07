@@ -2,6 +2,7 @@ package registry
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"time"
 
@@ -32,7 +33,7 @@ func (p timeSlice) Swap(i, j int) {
 }
 
 // PurgeOldTags purge old tags.
-func PurgeOldTags(client *Client, purgeDryRun bool, purgeTagsKeepDays, purgeTagsKeepCount int) {
+func PurgeOldTags(client *Client, purgeDryRun bool, purgeTagsKeepDays, purgeTagsKeepCount int, purgeTagsKeepRegexp string) {
 	logger := SetupLogging("registry.tasks.PurgeOldTags")
 	dryRunText := ""
 	if purgeDryRun {
@@ -83,10 +84,11 @@ func PurgeOldTags(client *Client, purgeDryRun bool, purgeTagsKeepDays, purgeTags
 		sort.Sort(sortedTags)
 		repos[repo] = sortedTags
 
-		// Filter out tags by retention days.
+		// Filter out tags by retention days and regexp
 		for _, tag := range repos[repo] {
+			regexpMatch, _ := regexp.MatchString(purgeTagsKeepRegexp, tag.name)
 			delta := int(now.Sub(tag.created).Hours() / 24)
-			if delta > purgeTagsKeepDays {
+			if !regexpMatch && delta > purgeTagsKeepDays {
 				purgeTags[repo] = append(purgeTags[repo], tag.name)
 			} else {
 				keepTags[repo] = append(keepTags[repo], tag.name)
