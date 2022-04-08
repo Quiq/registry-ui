@@ -86,11 +86,11 @@ func PurgeOldTags(client *Client, purgeDryRun bool, purgeTagsKeepDays, purgeTags
 
 		// Filter out tags by retention days and regexp
 		for _, tag := range repos[repo] {
-      regexpKeep := false
-      if purgeTagsKeepRegexp != "" {
-        regexpMatch, _ := regexp.MatchString(purgeTagsKeepRegexp, tag.name)
-        regexpKeep = regexpMatch
-      }
+			regexpKeep := false
+			if purgeTagsKeepRegexp != "" {
+				regexpMatch, _ := regexp.MatchString(purgeTagsKeepRegexp, tag.name)
+				regexpKeep = regexpMatch
+			}
 			delta := int(now.Sub(tag.created).Hours() / 24)
 			if !regexpKeep && delta > purgeTagsKeepDays {
 				purgeTags[repo] = append(purgeTags[repo], tag.name)
