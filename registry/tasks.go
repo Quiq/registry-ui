@@ -25,7 +25,11 @@ func (p timeSlice) Len() int {
 }
 
 func (p timeSlice) Less(i, j int) bool {
-	return p[i].created.After(p[j].created)
+	if p[i].created.Equal(p[j].created) {
+		return p[i].name > p[j].name
+	} else {
+		return p[i].created.After(p[j].created)
+	}
 }
 
 func (p timeSlice) Swap(i, j int) {
