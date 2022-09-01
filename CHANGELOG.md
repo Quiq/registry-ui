@@ -1,5 +1,12 @@
 ## Changelog
 
+### 0.9.5 (unreleased)
+
+* Upgrade Go version to 1.19.0, alpine to 3.16 and other dependencies.
+* Added an option `purge_tags_keep_regexp` to preserve tags based on regexp
+* Added an option `purge_tags_keep_from_file` to preserve tags for repos listed in the file provided
+* Fix for a bug when there was a bit more tags preserved than defined by `purge_tags_keep_count`
+
 ### 0.9.4 (2022-04-06)
 
 * Upgrade Go version to 1.18.0, alpine to 3.15 and other dependencies.

@@ -1,11 +1,31 @@
 package registry
 
 import (
+	"math"
 	"testing"
 	"time"
 
 	"github.com/smartystreets/goconvey/convey"
 )
+
+func TestKeepMinCount(t *testing.T) {
+	keepTags := []string{"1.8.15"}
+	purgeTags := []string{"1.8.14", "1.8.13", "1.8.12", "1.8.10", "1.8.9", "1.8.8", "1.8.7", "1.8.6", "1.8.5", "1.8.4", "1.8.3"}
+	purgeTagsKeepCount := 10
+
+	// Keep minimal count of tags no matter how old they are.
+	if len(keepTags) < purgeTagsKeepCount {
+		// Min of threshold-keep but not more than purge.
+		takeFromPurge := int(math.Min(float64(purgeTagsKeepCount-len(keepTags)), float64(len(purgeTags))))
+		keepTags = append(keepTags, purgeTags[:takeFromPurge]...)
+		purgeTags = purgeTags[takeFromPurge:]
+	}
+
+	convey.Convey("Test keep min count logic", t, func() {
+		convey.So(keepTags, convey.ShouldResemble, []string{"1.8.15", "1.8.14", "1.8.13", "1.8.12", "1.8.10", "1.8.9", "1.8.8", "1.8.7", "1.8.6", "1.8.5"})
+		convey.So(purgeTags, convey.ShouldResemble, []string{"1.8.4", "1.8.3"})
+	})
+}
 
 func TestSortedMapKeys(t *testing.T) {
 	a := map[string]string{

@@ -21,7 +21,7 @@ type Template struct {
 func (r *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
 	t, err := r.View.GetTemplate(name)
 	if err != nil {
-		panic(fmt.Errorf("Fatal error template file: %s", err))
+		panic(fmt.Errorf("fatal error template file: %s", err))
 	}
 	vars, ok := data.(jet.VarMap)
 	if !ok {
@@ -29,7 +29,7 @@ func (r *Template) Render(w io.Writer, name string, data interface{}, c echo.Con
 	}
 	err = t.Execute(w, vars, nil)
 	if err != nil {
-		panic(fmt.Errorf("Error rendering template %s: %s", name, err))
+		panic(fmt.Errorf("error rendering template %s: %s", name, err))
 	}
 	return nil
 }

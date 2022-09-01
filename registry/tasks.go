@@ -2,12 +2,21 @@ package registry
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"sort"
 	"time"
 
 	"github.com/tidwall/gjson"
 )
+
+type PurgeTagsConfig struct {
+	DryRun           bool
+	KeepDays         int
+	KeepMinCount     int
+	KeepTagRegexp    string
+	KeepTagsFromFile gjson.Result
+}
 
 type tagData struct {
 	name    string
@@ -37,10 +46,10 @@ func (p timeSlice) Swap(i, j int) {
 }
 
 // PurgeOldTags purge old tags.
-func PurgeOldTags(client *Client, purgeDryRun bool, purgeTagsKeepDays, purgeTagsKeepCount int, purgeTagsKeepRegexp string) {
+func PurgeOldTags(client *Client, config *PurgeTagsConfig) {
 	logger := SetupLogging("registry.tasks.PurgeOldTags")
 	dryRunText := ""
-	if purgeDryRun {
+	if config.DryRun {
 		logger.Warn("Dry-run mode enabled.")
 		dryRunText = "skipped"
 	}
@@ -75,27 +84,35 @@ func PurgeOldTags(client *Client, purgeDryRun bool, purgeTagsKeepDays, purgeTags
 	}
 
 	logger.Infof("Scanned %d repositories.", count)
-	logger.Info("Filtering out tags for purging...")
+	logger.Infof("Filtering out tags for purging: keep %d days, keep count %d", config.KeepDays, config.KeepMinCount)
+	if config.KeepTagRegexp != "" {
+		logger.Infof("Keeping tags matching regexp: %s", config.KeepTagRegexp)
+	}
+	if config.KeepTagsFromFile.IsObject() {
+		logger.Infof("Keeping tags for repos from the file: %+v", config.KeepTagsFromFile)
+	}
 	purgeTags := map[string][]string{}
 	keepTags := map[string][]string{}
 	count = 0
 	for _, repo := range SortedMapKeys(repos) {
 		// Sort tags by "created" from newest to oldest.
-		sortedTags := make(timeSlice, 0, len(repos[repo]))
-		for _, d := range repos[repo] {
-			sortedTags = append(sortedTags, d)
-		}
-		sort.Sort(sortedTags)
-		repos[repo] = sortedTags
+		sort.Sort(repos[repo])
 
-		// Filter out tags by retention days and regexp
+		// Prep the list of tags to preserve if defined in the file
+		tagsFromFile := []string{}
+		for _, i := range config.KeepTagsFromFile.Get(repo).Array() {
+			tagsFromFile = append(tagsFromFile, i.String())
+		}
+
+		// Filter out tags
 		for _, tag := range repos[repo] {
-			regexpKeep := false
-			if purgeTagsKeepRegexp != "" {
-				regexpKeep, _ = regexp.MatchString(purgeTagsKeepRegexp, tag.name)
+			daysOld := int(now.Sub(tag.created).Hours() / 24)
+			keepByRegexp := false
+			if config.KeepTagRegexp != "" {
+				keepByRegexp, _ = regexp.MatchString(config.KeepTagRegexp, tag.name)
 			}
-			delta := int(now.Sub(tag.created).Hours() / 24)
-			if !regexpKeep && delta > purgeTagsKeepDays {
+
+			if daysOld > config.KeepDays && !keepByRegexp && !ItemInSlice(tag.name, tagsFromFile) {
 				purgeTags[repo] = append(purgeTags[repo], tag.name)
 			} else {
 				keepTags[repo] = append(keepTags[repo], tag.name)
@@ -103,14 +120,11 @@ func PurgeOldTags(client *Client, purgeDryRun bool, purgeTagsKeepDays, purgeTags
 		}
 
 		// Keep minimal count of tags no matter how old they are.
-		if len(repos[repo])-len(purgeTags[repo]) < purgeTagsKeepCount {
-			if len(purgeTags[repo]) > purgeTagsKeepCount {
-				keepTags[repo] = append(keepTags[repo], purgeTags[repo][:purgeTagsKeepCount]...)
-				purgeTags[repo] = purgeTags[repo][purgeTagsKeepCount:]
-			} else {
-				keepTags[repo] = append(keepTags[repo], purgeTags[repo]...)
-				delete(purgeTags, repo)
-			}
+		if len(keepTags[repo]) < config.KeepMinCount {
+			// At least "threshold"-"keep" but not more than available for "purge".
+			takeFromPurge := int(math.Min(float64(config.KeepMinCount-len(keepTags[repo])), float64(len(purgeTags[repo]))))
+			keepTags[repo] = append(keepTags[repo], purgeTags[repo][:takeFromPurge]...)
+			purgeTags[repo] = purgeTags[repo][takeFromPurge:]
 		}
 
 		count = count + len(purgeTags[repo])
@@ -125,8 +139,11 @@ func PurgeOldTags(client *Client, purgeDryRun bool, purgeTagsKeepDays, purgeTags
 	}
 
 	for _, repo := range SortedMapKeys(purgeTags) {
+		if len(purgeTags[repo]) == 0 {
+			continue
+		}
 		logger.Infof("[%s] Purging %d tags... %s", repo, len(purgeTags[repo]), dryRunText)
-		if purgeDryRun {
+		if config.DryRun {
 			continue
 		}
 		for _, tag := range purgeTags[repo] {

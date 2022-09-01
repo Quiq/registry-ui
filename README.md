@@ -102,8 +102,6 @@ You can try to run in dry-run mode first to see what is going to be purged:
 
 Alternatively, you can schedule the purging task with built-in cron feature:
 
-    purge_tags_keep_days: 90
-    purge_tags_keep_count: 2
     purge_tags_schedule: '0 10 3 * * *'
 
 Note, the cron schedule format includes seconds! See https://godoc.org/github.com/robfig/cron
