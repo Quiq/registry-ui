@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/quiq/docker-registry-ui/registry"
-	"github.com/tidwall/gjson"
 	"gopkg.in/yaml.v2"
 )
 
@@ -31,7 +30,7 @@ type configData struct {
 	PurgeTagsKeepDays     int      `yaml:"purge_tags_keep_days"`
 	PurgeTagsKeepCount    int      `yaml:"purge_tags_keep_count"`
 	PurgeTagsKeepRegexp   string   `yaml:"purge_tags_keep_regexp"`
-	PurgeTagsKeepFile     string   `yaml:"purge_tags_keep_from_file"`
+	PurgeTagsKeepFromFile string   `yaml:"purge_tags_keep_from_file"`
 	PurgeTagsSchedule     string   `yaml:"purge_tags_schedule"`
 
 	PurgeConfig *registry.PurgeTagsConfig
@@ -77,17 +76,7 @@ func readConfig(configFile string) *configData {
 		KeepDays:      config.PurgeTagsKeepDays,
 		KeepMinCount:  config.PurgeTagsKeepCount,
 		KeepTagRegexp: config.PurgeTagsKeepRegexp,
+		KeepFromFile:  config.PurgeTagsKeepFromFile,
 	}
-	if config.PurgeTagsKeepFile != "" {
-		if _, err := os.Stat(config.PurgeTagsKeepFile); os.IsNotExist(err) {
-			panic(err)
-		}
-		data, err := ioutil.ReadFile(config.PurgeTagsKeepFile)
-		if err != nil {
-			panic(err)
-		}
-		config.PurgeConfig.KeepTagsFromFile = gjson.ParseBytes(data)
-	}
-
 	return &config
 }

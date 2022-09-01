@@ -2,7 +2,9 @@ package registry
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math"
+	"os"
 	"regexp"
 	"sort"
 	"time"
@@ -11,11 +13,11 @@ import (
 )
 
 type PurgeTagsConfig struct {
-	DryRun           bool
-	KeepDays         int
-	KeepMinCount     int
-	KeepTagRegexp    string
-	KeepTagsFromFile gjson.Result
+	DryRun        bool
+	KeepDays      int
+	KeepMinCount  int
+	KeepTagRegexp string
+	KeepFromFile  string
 }
 
 type tagData struct {
@@ -48,6 +50,23 @@ func (p timeSlice) Swap(i, j int) {
 // PurgeOldTags purge old tags.
 func PurgeOldTags(client *Client, config *PurgeTagsConfig) {
 	logger := SetupLogging("registry.tasks.PurgeOldTags")
+
+	var keepTagsFromFile gjson.Result
+	if config.KeepFromFile != "" {
+		if _, err := os.Stat(config.KeepFromFile); os.IsNotExist(err) {
+			logger.Warnf("Cannot open %s: %s", config.KeepFromFile, err)
+			logger.Error("Not purging anything!")
+			return
+		}
+		data, err := ioutil.ReadFile(config.KeepFromFile)
+		if err != nil {
+			logger.Warnf("Cannot read %s: %s", config.KeepFromFile, err)
+			logger.Error("Not purging anything!")
+			return
+		}
+		keepTagsFromFile = gjson.ParseBytes(data)
+	}
+
 	dryRunText := ""
 	if config.DryRun {
 		logger.Warn("Dry-run mode enabled.")
@@ -88,8 +107,8 @@ func PurgeOldTags(client *Client, config *PurgeTagsConfig) {
 	if config.KeepTagRegexp != "" {
 		logger.Infof("Keeping tags matching regexp: %s", config.KeepTagRegexp)
 	}
-	if config.KeepTagsFromFile.IsObject() {
-		logger.Infof("Keeping tags for repos from the file: %+v", config.KeepTagsFromFile)
+	if config.KeepFromFile != "" {
+		logger.Infof("Keeping tags for repos from the file: %+v", keepTagsFromFile)
 	}
 	purgeTags := map[string][]string{}
 	keepTags := map[string][]string{}
@@ -100,7 +119,7 @@ func PurgeOldTags(client *Client, config *PurgeTagsConfig) {
 
 		// Prep the list of tags to preserve if defined in the file
 		tagsFromFile := []string{}
-		for _, i := range config.KeepTagsFromFile.Get(repo).Array() {
+		for _, i := range keepTagsFromFile.Get(repo).Array() {
 			tagsFromFile = append(tagsFromFile, i.String())
 		}
 
