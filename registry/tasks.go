@@ -36,11 +36,12 @@ func (p timeSlice) Len() int {
 }
 
 func (p timeSlice) Less(i, j int) bool {
+	// reverse sort tags on name if equal dates (OCI image case)
+	// see https://github.com/Quiq/docker-registry-ui/pull/62
 	if p[i].created.Equal(p[j].created) {
 		return p[i].name > p[j].name
-	} else {
-		return p[i].created.After(p[j].created)
 	}
+	return p[i].created.After(p[j].created)
 }
 
 func (p timeSlice) Swap(i, j int) {
@@ -86,10 +87,10 @@ func PurgeOldTags(client *Client, config *PurgeTagsConfig) {
 			}
 
 			tags := client.Tags(repo)
-			logger.Infof("[%s] scanning %d tags...", repo, len(tags))
 			if len(tags) == 0 {
 				continue
 			}
+			logger.Infof("[%s] scanning %d tags...", repo, len(tags))
 			for _, tag := range tags {
 				_, infoV1, _ := client.TagInfo(repo, tag, true)
 				if infoV1 == "" {
