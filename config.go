@@ -56,8 +56,9 @@ func readConfig(configFile string) *configData {
 	}
 
 	// Normalize base path.
+	config.BasePath = strings.Trim(config.BasePath, "/")
 	if config.BasePath != "" {
-		config.BasePath = "/" + strings.Trim(config.BasePath, "/")
+		config.BasePath = "/" + config.BasePath
 	}
 
 	// Read password from file.
