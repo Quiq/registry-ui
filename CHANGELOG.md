@@ -3,10 +3,13 @@
 ### 0.9.5 (unreleased)
 
 * Upgrade Go version to 1.19.0, alpine to 3.16 and other dependencies.
-* Added an option `purge_tags_keep_regexp` to preserve tags based on regexp (thanks to @dmaes).
-* Added an option `purge_tags_keep_from_file` to preserve tags for repos listed in the file provided.
-* Fix a bug when there was a bit more tags preserved than defined by `purge_tags_keep_count`.
+* Add an option `anyone_can_view_events` to restrict access to the event log. Set it to `true` to make event log accessible to anyone (to restore the previous behaviour), otherwise the default `false` will hide it and only admins can view it (thanks to @ribbybibby).
+* Add an option `purge_tags_keep_regexp` to preserve tags based on regexp (thanks to @dmaes).
+* Add an option `purge_tags_keep_from_file` to preserve tags for repos listed in the file provided.
 * When purging tags sort them by name reversibly when no date available, e.g. for OCI image format (thanks to @dmaes).
+* Fix a bug when there was a bit more tags preserved than defined by `purge_tags_keep_count`.
+
+Also see `config.yml` in this repo for the description of new options.
 
 ### 0.9.4 (2022-04-06)
 

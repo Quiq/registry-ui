@@ -12,6 +12,18 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+const usernameHTTPHeader = "X-WEBAUTH-USER"
+
+func (a *apiClient) setUserPermissions(c echo.Context) jet.VarMap {
+	user := c.Request().Header.Get(usernameHTTPHeader)
+
+	data := jet.VarMap{}
+	data.Set("user", user)
+	data.Set("eventsAllowed", a.config.AnyoneCanViewEvents || registry.ItemInSlice(user, a.config.Admins))
+	data.Set("deleteAllowed", a.config.AnyoneCanDelete || registry.ItemInSlice(user, a.config.Admins))
+	return data
+}
+
 func (a *apiClient) viewRepositories(c echo.Context) error {
 	namespace := c.Param("namespace")
 	if namespace == "" {
@@ -19,7 +31,7 @@ func (a *apiClient) viewRepositories(c echo.Context) error {
 	}
 
 	repos := a.client.Repositories(true)[namespace]
-	data := a.dataWithPermissions(c)
+	data := a.setUserPermissions(c)
 	data.Set("namespace", namespace)
 	data.Set("namespaces", a.client.Namespaces())
 	data.Set("repos", repos)
@@ -38,7 +50,7 @@ func (a *apiClient) viewTags(c echo.Context) error {
 
 	tags := a.client.Tags(repoPath)
 
-	data := a.dataWithPermissions(c)
+	data := a.setUserPermissions(c)
 	data.Set("namespace", namespace)
 	data.Set("repo", repo)
 	data.Set("tags", tags)
@@ -128,7 +140,7 @@ func (a *apiClient) viewTagInfo(c echo.Context) error {
 	}
 
 	// Populate template vars
-	data := a.dataWithPermissions(c)
+	data := a.setUserPermissions(c)
 	data.Set("namespace", namespace)
 	data.Set("repo", repo)
 	data.Set("tag", tag)
@@ -154,58 +166,17 @@ func (a *apiClient) deleteTag(c echo.Context) error {
 		repoPath = fmt.Sprintf("%s/%s", namespace, repo)
 	}
 
-	if a.checkDeletePermission(c.Request().Header.Get("X-WEBAUTH-USER")) {
+	data := a.setUserPermissions(c)
+	if data["deleteAllowed"].Bool() {
 		a.client.DeleteTag(repoPath, tag)
 	}
 
 	return c.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/%s/%s", a.config.BasePath, namespace, repo))
 }
 
-// dataWithPermissions returns a jet.VarMap with permission related information
-// set
-func (a *apiClient) dataWithPermissions(c echo.Context) jet.VarMap {
-	user := c.Request().Header.Get("X-WEBAUTH-USER")
-
-	data := jet.VarMap{}
-	data.Set("user", user)
-	data.Set("deleteAllowed", a.checkDeletePermission(user))
-	data.Set("eventsAllowed", a.checkEventsPermission(user))
-
-	return data
-}
-
-// checkDeletePermission check if tag deletion is allowed whether by anyone or permitted users.
-func (a *apiClient) checkDeletePermission(user string) bool {
-	deleteAllowed := a.config.AnyoneCanDelete
-	if !deleteAllowed {
-		for _, u := range a.config.Admins {
-			if u == user {
-				deleteAllowed = true
-				break
-			}
-		}
-	}
-	return deleteAllowed
-}
-
-// checkEventsPermission checks if anyone is allowed to view events or only
-// admins
-func (a *apiClient) checkEventsPermission(user string) bool {
-	eventsAllowed := a.config.AnyoneCanViewEvents
-	if !eventsAllowed {
-		for _, u := range a.config.Admins {
-			if u == user {
-				eventsAllowed = true
-				break
-			}
-		}
-	}
-	return eventsAllowed
-}
-
 // viewLog view events from sqlite.
 func (a *apiClient) viewLog(c echo.Context) error {
-	data := a.dataWithPermissions(c)
+	data := a.setUserPermissions(c)
 	data.Set("events", a.eventListener.GetEvents(""))
 
 	return c.Render(http.StatusOK, "event_log.html", data)

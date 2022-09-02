@@ -38,7 +38,9 @@ event_deletion_enabled: true
 # How long to cache repository list and tag counts.
 cache_refresh_interval: 10
 
-# If users can delete tags. If set to False, then only admins listed below.
+# If all users can view the event log. If set to false, then only admins listed below.
+anyone_can_view_events: true
+# If all users can delete tags. If set to false, then only admins listed below.
 anyone_can_delete: false
 # Users allowed to delete tags.
 # This should be sent via X-WEBAUTH-USER header from your proxy.
