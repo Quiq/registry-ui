@@ -2,12 +2,23 @@ package registry
 
 import (
 	"fmt"
+	"io/ioutil"
+	"math"
+	"os"
 	"regexp"
 	"sort"
 	"time"
 
 	"github.com/tidwall/gjson"
 )
+
+type PurgeTagsConfig struct {
+	DryRun        bool
+	KeepDays      int
+	KeepMinCount  int
+	KeepTagRegexp string
+	KeepFromFile  string
+}
 
 type tagData struct {
 	name    string
@@ -25,11 +36,12 @@ func (p timeSlice) Len() int {
 }
 
 func (p timeSlice) Less(i, j int) bool {
+	// reverse sort tags on name if equal dates (OCI image case)
+	// see https://github.com/Quiq/docker-registry-ui/pull/62
 	if p[i].created.Equal(p[j].created) {
 		return p[i].name > p[j].name
-	} else {
-		return p[i].created.After(p[j].created)
 	}
+	return p[i].created.After(p[j].created)
 }
 
 func (p timeSlice) Swap(i, j int) {
@@ -37,10 +49,27 @@ func (p timeSlice) Swap(i, j int) {
 }
 
 // PurgeOldTags purge old tags.
-func PurgeOldTags(client *Client, purgeDryRun bool, purgeTagsKeepDays, purgeTagsKeepCount int, purgeTagsKeepRegexp string) {
+func PurgeOldTags(client *Client, config *PurgeTagsConfig) {
 	logger := SetupLogging("registry.tasks.PurgeOldTags")
+
+	var keepTagsFromFile gjson.Result
+	if config.KeepFromFile != "" {
+		if _, err := os.Stat(config.KeepFromFile); os.IsNotExist(err) {
+			logger.Warnf("Cannot open %s: %s", config.KeepFromFile, err)
+			logger.Error("Not purging anything!")
+			return
+		}
+		data, err := ioutil.ReadFile(config.KeepFromFile)
+		if err != nil {
+			logger.Warnf("Cannot read %s: %s", config.KeepFromFile, err)
+			logger.Error("Not purging anything!")
+			return
+		}
+		keepTagsFromFile = gjson.ParseBytes(data)
+	}
+
 	dryRunText := ""
-	if purgeDryRun {
+	if config.DryRun {
 		logger.Warn("Dry-run mode enabled.")
 		dryRunText = "skipped"
 	}
@@ -58,10 +87,10 @@ func PurgeOldTags(client *Client, purgeDryRun bool, purgeTagsKeepDays, purgeTags
 			}
 
 			tags := client.Tags(repo)
-			logger.Infof("[%s] scanning %d tags...", repo, len(tags))
 			if len(tags) == 0 {
 				continue
 			}
+			logger.Infof("[%s] scanning %d tags...", repo, len(tags))
 			for _, tag := range tags {
 				_, infoV1, _ := client.TagInfo(repo, tag, true)
 				if infoV1 == "" {
@@ -75,27 +104,35 @@ func PurgeOldTags(client *Client, purgeDryRun bool, purgeTagsKeepDays, purgeTags
 	}
 
 	logger.Infof("Scanned %d repositories.", count)
-	logger.Info("Filtering out tags for purging...")
+	logger.Infof("Filtering out tags for purging: keep %d days, keep count %d", config.KeepDays, config.KeepMinCount)
+	if config.KeepTagRegexp != "" {
+		logger.Infof("Keeping tags matching regexp: %s", config.KeepTagRegexp)
+	}
+	if config.KeepFromFile != "" {
+		logger.Infof("Keeping tags for repos from the file: %+v", keepTagsFromFile)
+	}
 	purgeTags := map[string][]string{}
 	keepTags := map[string][]string{}
 	count = 0
 	for _, repo := range SortedMapKeys(repos) {
 		// Sort tags by "created" from newest to oldest.
-		sortedTags := make(timeSlice, 0, len(repos[repo]))
-		for _, d := range repos[repo] {
-			sortedTags = append(sortedTags, d)
-		}
-		sort.Sort(sortedTags)
-		repos[repo] = sortedTags
+		sort.Sort(repos[repo])
 
-		// Filter out tags by retention days and regexp
+		// Prep the list of tags to preserve if defined in the file
+		tagsFromFile := []string{}
+		for _, i := range keepTagsFromFile.Get(repo).Array() {
+			tagsFromFile = append(tagsFromFile, i.String())
+		}
+
+		// Filter out tags
 		for _, tag := range repos[repo] {
-			regexpKeep := false
-			if purgeTagsKeepRegexp != "" {
-				regexpKeep, _ = regexp.MatchString(purgeTagsKeepRegexp, tag.name)
+			daysOld := int(now.Sub(tag.created).Hours() / 24)
+			keepByRegexp := false
+			if config.KeepTagRegexp != "" {
+				keepByRegexp, _ = regexp.MatchString(config.KeepTagRegexp, tag.name)
 			}
-			delta := int(now.Sub(tag.created).Hours() / 24)
-			if !regexpKeep && delta > purgeTagsKeepDays {
+
+			if daysOld > config.KeepDays && !keepByRegexp && !ItemInSlice(tag.name, tagsFromFile) {
 				purgeTags[repo] = append(purgeTags[repo], tag.name)
 			} else {
 				keepTags[repo] = append(keepTags[repo], tag.name)
@@ -103,14 +140,11 @@ func PurgeOldTags(client *Client, purgeDryRun bool, purgeTagsKeepDays, purgeTags
 		}
 
 		// Keep minimal count of tags no matter how old they are.
-		if len(repos[repo])-len(purgeTags[repo]) < purgeTagsKeepCount {
-			if len(purgeTags[repo]) > purgeTagsKeepCount {
-				keepTags[repo] = append(keepTags[repo], purgeTags[repo][:purgeTagsKeepCount]...)
-				purgeTags[repo] = purgeTags[repo][purgeTagsKeepCount:]
-			} else {
-				keepTags[repo] = append(keepTags[repo], purgeTags[repo]...)
-				delete(purgeTags, repo)
-			}
+		if len(keepTags[repo]) < config.KeepMinCount {
+			// At least "threshold"-"keep" but not more than available for "purge".
+			takeFromPurge := int(math.Min(float64(config.KeepMinCount-len(keepTags[repo])), float64(len(purgeTags[repo]))))
+			keepTags[repo] = append(keepTags[repo], purgeTags[repo][:takeFromPurge]...)
+			purgeTags[repo] = purgeTags[repo][takeFromPurge:]
 		}
 
 		count = count + len(purgeTags[repo])
@@ -125,8 +159,11 @@ func PurgeOldTags(client *Client, purgeDryRun bool, purgeTagsKeepDays, purgeTags
 	}
 
 	for _, repo := range SortedMapKeys(purgeTags) {
+		if len(purgeTags[repo]) == 0 {
+			continue
+		}
 		logger.Infof("[%s] Purging %d tags... %s", repo, len(purgeTags[repo]), dryRunText)
-		if purgeDryRun {
+		if config.DryRun {
 			continue
 		}
 		for _, tag := range purgeTags[repo] {
