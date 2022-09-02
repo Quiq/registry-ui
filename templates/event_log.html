@@ -20,6 +20,7 @@
     <li class="active">Event Log</li>
 </ol>
 
+{{if eventsAllowed}}
 <table id="datatable" class="table table-striped table-bordered">
     <thead bgcolor="#ddd">
         <tr>
@@ -46,4 +47,9 @@
         {{end}}
     </tbody>
 </table>
+{{else}}
+<div class="text-center">
+    <h4>User "{{user}}" is not permitted to view the Event Log.</h4>
+</div>
+{{end}}
 {{end}}

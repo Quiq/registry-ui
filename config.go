@@ -25,6 +25,7 @@ type configData struct {
 	EventDeletionEnabled  bool     `yaml:"event_deletion_enabled"`
 	CacheRefreshInterval  uint8    `yaml:"cache_refresh_interval"`
 	AnyoneCanDelete       bool     `yaml:"anyone_can_delete"`
+	AnyoneCanViewEvents   bool     `yaml:"anyone_can_view_events"`
 	Admins                []string `yaml:"admins"`
 	Debug                 bool     `yaml:"debug"`
 	PurgeTagsKeepDays     int      `yaml:"purge_tags_keep_days"`
