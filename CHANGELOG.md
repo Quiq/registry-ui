@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.9.5 (unreleased)
+### 0.9.5 (2022-09-05)
 
 * Upgrade Go version to 1.19.0, alpine to 3.16 and other dependencies.
 * Add an option `anyone_can_view_events` to restrict access to the event log. Set it to `true` to make event log accessible to anyone (to restore the previous behaviour), otherwise the default `false` will hide it and only admins can view it (thanks to @ribbybibby).
