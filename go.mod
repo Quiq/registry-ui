@@ -6,7 +6,7 @@ require (
 	github.com/elazarl/goproxy v0.0.0-20220529153421-8ea89ba92021 // indirect
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/labstack/echo/v4 v4.8.0
-	github.com/mattn/go-sqlite3 v2.0.3+incompatible
+	github.com/mattn/go-sqlite3 v1.14.15
 	github.com/parnurzeal/gorequest v0.2.16
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/robfig/cron v1.2.0
