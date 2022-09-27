@@ -1,0 +1,43 @@
+---
+
+name: CI
+
+on:
+  push:
+    branches:
+    #branches-ignore:
+    #  - '**'
+    #tags:
+    #  - '*.*.*'
+  schedule:
+    - cron: "0 20 * * 0"
+
+jobs:
+  release-linux-amd64:
+    name: "release with go version: ${{ matrix.go }}"
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        release_tag:
+          - 0.9.5
+        go:
+          - 1.19
+
+    steps:
+      - name: 🛎 Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - uses: wangyoucao577/go-release-action@v1.32
+        with:
+          github_token: ${{ secrets.GH_REGISTRY_TOKEN }}
+          release_tag: ${{ matrix.release_tag }}
+          goos: linux
+          goarch: amd64
+          goversion: ${{ matrix.go }}
+          binary_name: registry-ui
+          sha256sum: true
+          overwrite: true
+          extra_files: LICENSE README.md templates static
