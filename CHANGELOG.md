@@ -1,5 +1,9 @@
 ## Changelog
 
+### 0.9.6 (2023-03-30)
+
+* Upgrade Go version to 1.20.2, alpine to 3.17 and other dependencies.
+
 ### 0.9.5 (2022-09-05)
 
 * Upgrade Go version to 1.19.0, alpine to 3.16 and other dependencies.
