@@ -1,6 +1,18 @@
 {{extends "base.html"}}
 
-{{block head()}}{{end}}
+{{block head()}}
+        <style>
+        /* col 0 style */
+        td:nth-child(1) {
+          color: #838383;
+          text-align: right;
+        }
+        /* td: long line wrap */
+        td {
+          word-break: break-word;
+        }
+        </style>
+{{end}}
 
 {{block body()}}
 <ol class="breadcrumb">
