@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"net/url"
 	"os"
 	"strings"
@@ -43,7 +42,7 @@ func readConfig(configFile string) *configData {
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
 		panic(err)
 	}
-	data, err := ioutil.ReadFile(configFile)
+	data, err := os.ReadFile(configFile)
 	if err != nil {
 		panic(err)
 	}
@@ -67,7 +66,7 @@ func readConfig(configFile string) *configData {
 		if _, err := os.Stat(config.PasswordFile); os.IsNotExist(err) {
 			panic(err)
 		}
-		data, err := ioutil.ReadFile(config.PasswordFile)
+		data, err := os.ReadFile(config.PasswordFile)
 		if err != nil {
 			panic(err)
 		}

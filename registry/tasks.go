@@ -2,7 +2,6 @@ package registry
 
 import (
 	"fmt"
-	"io/ioutil"
 	"math"
 	"os"
 	"regexp"
@@ -59,7 +58,7 @@ func PurgeOldTags(client *Client, config *PurgeTagsConfig) {
 			logger.Error("Not purging anything!")
 			return
 		}
-		data, err := ioutil.ReadFile(config.KeepFromFile)
+		data, err := os.ReadFile(config.KeepFromFile)
 		if err != nil {
 			logger.Warnf("Cannot read %s: %s", config.KeepFromFile, err)
 			logger.Error("Not purging anything!")
