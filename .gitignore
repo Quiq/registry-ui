@@ -1,4 +1,3 @@
 data/registry_events.db
-config-dev.yml
-dev.Makefile
+config-dev*.yml
 keep_tags.json
