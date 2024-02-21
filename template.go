@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
-	"strings"
+	"time"
 
 	"github.com/CloudyKit/jet"
 	"github.com/labstack/echo/v4"
@@ -52,10 +52,9 @@ func setupRenderer(debug bool, registryHost, basePath string) *Template {
 		}
 		return registry.PrettySize(value)
 	})
-	view.AddGlobal("pretty_time", func(datetime interface{}) string {
-		d := strings.Replace(datetime.(string), "T", " ", 1)
-		d = strings.Replace(d, "Z", "", 1)
-		return strings.Split(d, ".")[0]
+	view.AddGlobal("pretty_time", func(timeVal interface{}) string {
+		t, _ := time.Parse("2006-01-02T15:04:05Z", timeVal.(string))
+		return t.In(time.Local).Format("2006-01-02 15:04:05 MST")
 	})
 	view.AddGlobal("parse_map", func(m interface{}) string {
 		var res string
