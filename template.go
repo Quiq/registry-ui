@@ -53,7 +53,11 @@ func setupRenderer(debug bool, registryHost, basePath string) *Template {
 		return registry.PrettySize(value)
 	})
 	view.AddGlobal("pretty_time", func(timeVal interface{}) string {
-		t, _ := time.Parse("2006-01-02T15:04:05Z", timeVal.(string))
+		t, err := time.Parse("2006-01-02T15:04:05Z", timeVal.(string))
+		if err != nil {
+			// mysql case
+			t, _ = time.Parse("2006-01-02 15:04:05", timeVal.(string))
+		}
 		return t.In(time.Local).Format("2006-01-02 15:04:05 MST")
 	})
 	view.AddGlobal("parse_map", func(m interface{}) string {
