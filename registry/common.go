@@ -5,6 +5,7 @@ import (
 	"os"
 	"reflect"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -57,4 +58,16 @@ func ItemInSlice(item string, slice []string) bool {
 		}
 	}
 	return false
+}
+
+// Sprit repo path by namespace and repo name
+func SplitRepoPath(repoPath string) (string, string) {
+	namespace := "library"
+	repo := repoPath
+	if strings.Contains(repoPath, "/") {
+		f := strings.SplitN(repoPath, "/", 2)
+		namespace = f[0]
+		repo = f[1]
+	}
+	return namespace, repo
 }

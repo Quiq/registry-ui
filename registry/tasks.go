@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/tidwall/gjson"
@@ -48,7 +49,7 @@ func (p timeSlice) Swap(i, j int) {
 }
 
 // PurgeOldTags purge old tags.
-func PurgeOldTags(client *Client, config *PurgeTagsConfig) {
+func PurgeOldTags(client *Client, config *PurgeTagsConfig, purgeFromRepos string) {
 	logger := SetupLogging("registry.tasks.PurgeOldTags")
 
 	var keepTagsFromFile gjson.Result
@@ -72,9 +73,19 @@ func PurgeOldTags(client *Client, config *PurgeTagsConfig) {
 		logger.Warn("Dry-run mode enabled.")
 		dryRunText = "skipped"
 	}
-	logger.Info("Scanning registry for repositories, tags and their creation dates...")
-	catalog := client.Repositories(true)
-	// catalog := map[string][]string{"library": []string{""}}
+
+	catalog := map[string][]string{}
+	if purgeFromRepos != "" {
+		logger.Infof("Working on repositories [%s] to scan their tags and creation dates...", purgeFromRepos)
+		for _, p := range strings.Split(purgeFromRepos, ",") {
+			namespace, repo := SplitRepoPath(p)
+			catalog[namespace] = append(catalog[namespace], repo)
+		}
+	} else {
+		logger.Info("Scanning registry for repositories, tags and their creation dates...")
+		catalog = client.Repositories(true)
+	}
+
 	now := time.Now().UTC()
 	repos := map[string]timeSlice{}
 	count := 0
@@ -97,6 +108,10 @@ func PurgeOldTags(client *Client, config *PurgeTagsConfig) {
 					continue
 				}
 				created := gjson.Get(gjson.Get(infoV1, "history.0.v1Compatibility").String(), "created").Time()
+				if created.IsZero() {
+					// OCI manifest w/o creation time or any other case with zero time
+					continue
+				}
 				repos[repo] = append(repos[repo], tagData{name: tag, created: created})
 			}
 		}

@@ -23,12 +23,14 @@ func main() {
 	var (
 		a apiClient
 
-		configFile, loggingLevel string
-		purgeTags, purgeDryRun   bool
+		configFile, loggingLevel, purgeFromRepos string
+		disableCountTags, purgeTags, purgeDryRun bool
 	)
 	flag.StringVar(&configFile, "config-file", "config.yml", "path to the config file")
 	flag.StringVar(&loggingLevel, "log-level", "info", "logging level")
+	flag.BoolVar(&disableCountTags, "disable-count-tags", false, "disable counting of tags if it is very slow")
 	flag.BoolVar(&purgeTags, "purge-tags", false, "purge old tags instead of running a web server")
+	flag.StringVar(&purgeFromRepos, "purge-from-repos", "", "comma-separated list of repos to purge instead of all")
 	flag.BoolVar(&purgeDryRun, "dry-run", false, "dry-run for purging task, does not delete anything")
 	flag.Parse()
 
@@ -50,7 +52,7 @@ func main() {
 	}
 
 	purgeFunc := func() {
-		registry.PurgeOldTags(a.client, a.config.PurgeConfig)
+		registry.PurgeOldTags(a.client, a.config.PurgeConfig, purgeFromRepos)
 	}
 
 	// Execute CLI task and exit.
@@ -69,7 +71,9 @@ func main() {
 	}
 
 	// Count tags in background.
-	go a.client.CountTags(a.config.CacheRefreshInterval)
+	if !disableCountTags {
+		go a.client.CountTags(a.config.CacheRefreshInterval)
+	}
 
 	if a.config.EventDatabaseDriver != "sqlite3" && a.config.EventDatabaseDriver != "mysql" {
 		panic(fmt.Errorf("event_database_driver should be either sqlite3 or mysql"))

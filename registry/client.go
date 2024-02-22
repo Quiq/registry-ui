@@ -17,6 +17,8 @@ import (
 
 const userAgent = "docker-registry-ui"
 
+var paginationRegex = regexp.MustCompile("^<(.*?)>;.*$")
+
 // Client main class.
 type Client struct {
 	url       string
@@ -120,6 +122,8 @@ func (c *Client) getToken(scope string) string {
 
 // callRegistry make an HTTP request to retrieve data from Docker registry.
 func (c *Client) callRegistry(uri, scope, manifestFormat string) (string, gorequest.Response) {
+	// TODO Support OCI manifest https://github.com/opencontainers/image-spec/blob/main/manifest.md
+	// acceptHeader := "application/vnd.oci.image.manifest.v1+json"
 	acceptHeader := fmt.Sprintf("application/vnd.docker.distribution.%s+json", manifestFormat)
 	authHeader := ""
 	if c.authURL != "" {
@@ -176,31 +180,25 @@ func (c *Client) Repositories(useCache bool) map[string][]string {
 	c.mux.Lock()
 	defer c.mux.Unlock()
 
-	linkRegexp := regexp.MustCompile("^<(.*?)>;.*$")
 	scope := "registry:catalog:*"
 	uri := "/v2/_catalog"
 	tmp := map[string][]string{}
+	count := 0
 	for {
 		data, resp := c.callRegistry(uri, scope, "manifest.v2")
 		if data == "" {
-			c.repos = tmp
-			return c.repos
+			break
 		}
 
 		for _, r := range gjson.Get(data, "repositories").Array() {
-			namespace := "library"
-			repo := r.String()
-			if strings.Contains(repo, "/") {
-				f := strings.SplitN(repo, "/", 2)
-				namespace = f[0]
-				repo = f[1]
-			}
+			namespace, repo := SplitRepoPath(r.String())
 			tmp[namespace] = append(tmp[namespace], repo)
+			count++
 		}
 
 		// pagination
 		linkHeader := resp.Header.Get("Link")
-		link := linkRegexp.FindStringSubmatch(linkHeader)
+		link := paginationRegex.FindStringSubmatch(linkHeader)
 		if len(link) == 2 {
 			// update uri and query next page
 			uri = link[1]
@@ -210,6 +208,7 @@ func (c *Client) Repositories(useCache bool) map[string][]string {
 		}
 	}
 	c.repos = tmp
+	c.logger.Debugf("Refreshed the catalog of %d repositories.", count)
 	return c.repos
 }
 
@@ -286,7 +285,7 @@ func (c *Client) CountTags(interval uint8) {
 				c.tagCounts[fmt.Sprintf("%s/%s", n, r)] = len(c.Tags(repoPath))
 			}
 		}
-		c.logger.Infof("[CountTags] Job complete (%v).", time.Now().Sub(start))
+		c.logger.Infof("[CountTags] Job complete (%v).", time.Since(start))
 		time.Sleep(time.Duration(interval) * time.Minute)
 	}
 }

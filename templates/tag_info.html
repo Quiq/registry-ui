@@ -107,7 +107,7 @@
 </table>
 {{end}}
 
-{{if not isDigest}}
+{{if not isDigest && layersV1}}
 <h4>Image History <!-- Manifest v2 schema 1--></h4>
 {{range index, layer := layersV1}}
 <table class="table table-striped table-bordered">

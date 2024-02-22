@@ -1,5 +1,10 @@
 ## Changelog
 
+### UNRELEASED
+
+* Add an option to disable counting of tags if it is very slow: `-disable-count-tags`
+* Add an option to specify a comma-separated list of repos to purge: `-purge-from-repos`
+
 ### 0.9.7 (2024-02-21)
 
 * Fix timezone support: now when running a container with `TZ` env var, e.g. "-e TZ=America/Los_Angeles", it will be reflected everywhere on UI.
