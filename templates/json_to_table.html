@@ -1,0 +1,32 @@
+{{ block json_to_table() }}
+
+{{ try }}
+<table class="table table-striped table-bordered" style="margin-bottom: 0">
+{{range i, k := sort_map_keys(.) }}
+    {{ v := .[k] }}
+    <tr>
+        <td width="15%" style="padding: 2px 8px;">{{k}}</td>
+        <td style="padding: 2px 8px;">
+            {{if ii.IsImage && k == "size"}}{{ pretty_size(v) }}
+            {{else if ii.IsImageIndex && k == "digest"}}<a href="{{ basePath }}/{{ ii.ImageRefRepo }}@{{ v }}">{{ v }}</a>
+            {{else}}{{ yield json_to_table() v }}{{end}}
+        </td>
+    </tr>
+{{end}}
+</table>
+
+{{ catch err }}
+{{if err.Error() == "reflect: call of reflect.Value.MapKeys on slice Value"}}
+<table class="table table-striped table-bordered" style="margin-bottom: 0">
+    {{range _, e := . }}
+    <tr>
+        <td style="text-align: left; color: #000; padding: 0px 0px;">{{ yield json_to_table() e }}</td>
+    </tr>
+    {{end}}
+</table>
+{{else}}
+    {{ . }}
+{{end}}
+{{end}} {* end try *}
+
+{{ end }}

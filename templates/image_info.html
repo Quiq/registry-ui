@@ -1,0 +1,90 @@
+{{extends "base.html"}}
+{{import "breadcrumb.html"}}
+{{import "json_to_table.html"}}
+
+{{block head()}}
+<style>
+    /* col 0 style */
+    td:nth-child(1) {
+        color: #838383;
+        text-align: right;
+    }
+    /* td: long line wrap */
+    td {
+        word-break: break-word;
+    }
+</style>
+{{end}}
+
+{{block body()}}
+<ol class="breadcrumb">
+    {{ yield breadcrumb() ii.ImageRefRepo }}
+    <li><a href="{{ basePath }}/{{ repoPath }}">{{ ii.ImageRefTag }}</a></li>
+</ol>
+
+
+<h4>
+    {{if ii.IsImage}}<i class="bi-file-earmark" style="font-size: 2rem;"></i> Image{{end}}
+    {{if ii.IsImageIndex}}<i class="bi-files" style="font-size: 2rem;"></i> Image Index{{end}}
+</h4>
+<table class="table table-striped table-bordered">
+    <thead bgcolor="#ddd">
+        <tr>
+            <th colspan="2">Summary</th>
+        </tr>
+    </thead>
+    <tr>
+        <td width="20%"><b>Image Reference</b></td><td>{{ registryHost }}/{{ repoPath }}</td>
+    </tr>
+    <tr>
+        <td><b>Digest</b></td><td><a href="{{ basePath }}/{{ ii.ImageRefRepo }}@{{ ii.ImageRefDigest }}">{{ ii.ImageRefDigest }}</a></td>
+    </tr>
+    <tr>
+        <td><b>Media Type</b></td><td>{{ ii.MediaType }}</td>
+    </tr>
+    {{if ii.IsImageIndex}}
+    <tr>
+        <td><b>Sub-Images</b></td><td>{{ len(ii.Manifest["manifests"]) }} </td>
+    </tr>
+    <tr>
+        <td><b>Platforms</b></td><td>{{ ii.Platforms }}</td>
+    </tr>
+    {{end}}
+    {{if ii.IsImage}}
+    <tr>
+        <td><b>Image ID</b></td><td>{{ ii.ConfigImageID }}</td>
+    </tr>
+    <tr>
+        <td><b>Image Size</b></td><td>{{ ii.ImageSize|pretty_size }}</td>
+    </tr>
+    <tr>
+        <td><b>Platform</b></td><td>{{ ii.Platforms }}</td>
+    </tr>
+    <tr>
+        <td><b>Created On</b></td><td>{{ ii.Created|pretty_time }}</td>
+    </tr>
+    {{end}}
+</table>
+
+<table class="table" style="margin-bottom: 0">
+    <thead bgcolor="#ddd">
+        <tr>
+            <th>{{if ii.IsImage}}Manifest{{else}}Index Manifest{{end}}</th>
+        </tr>
+    </thead>
+</table>
+{{ yield json_to_table() ii.Manifest }}
+
+{{if ii.IsImage}}
+<br>
+<table class="table" style="margin-bottom: 0">
+    <thead bgcolor="#ddd">
+        <tr>
+            <th>Config File</th>
+        </tr>
+    </thead>
+</table>
+{{ yield json_to_table() ii.ConfigFile }}
+{{end}}
+
+{{end}}

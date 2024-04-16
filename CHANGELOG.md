@@ -1,9 +1,25 @@
 ## Changelog
 
-### UNRELEASED
+### 0.10.0 (2024-04-16)
 
-* Add an option to disable counting of tags if it is very slow: `-disable-count-tags`
-* Add an option to specify a comma-separated list of repos to purge: `-purge-from-repos`
+**JUST BREAKING CHANGES**
+
+* We have made a full rewrite. Over 6 years many things have been changed.
+* Renamed github/dockerhub repo from docker-registry-ui -> registry-ui
+* Switched from doing raw http calls to github.com/google/go-containerregistry
+* URLs and links are now matching the image references, no more "library" or other weird URL parts.
+* No namespace or only 2-level deep concept
+* An arbitrary repository levels are supported
+* It is even possible to list both sub-repos and tags within the same repo path if you have those
+* Added support for OCI images, so now both Docker + OCI are supported
+* Proper support of Image Index (Index Manifest)
+* Display full information available about Image or Image Index
+* Sub-images (multi-platform ones) are linked under Image Index
+* Changed format of config.yml but the same concept is preserved
+* Event listener path has been changed from /api/events to /event-receiver and you may need to update your registry config
+* Removed built-in cron scheduler for purging tags, please use the normal cron :)
+* Now you can now tune the refresh of catalog and separately refresh of tag counting, disable them etc.
+* Everything has been made better! :)
 
 ### 0.9.7 (2024-02-21)
 

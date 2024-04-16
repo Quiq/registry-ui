@@ -1,0 +1,10 @@
+{{ block breadcrumb() }}
+    <li><a href="{{ basePath }}/">{{ registryHost }}</a></li>
+    {{if . != nil}}
+        {{x := ""}}
+        {{range _, p := split(., "/")}}
+        {{x = x + "/" + p}}
+        <li><a href="{{ basePath }}{{ x }}">{{ p }}</a></li>
+        {{end}}
+    {{end}}
+{{ end }}

@@ -1,289 +1,301 @@
 package registry
 
 import (
-	"crypto"
-	"crypto/tls"
-	"fmt"
-	"regexp"
-	"sort"
+	"context"
+	"encoding/json"
+	"os"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/parnurzeal/gorequest"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sirupsen/logrus"
-	"github.com/tidwall/gjson"
+	"github.com/spf13/viper"
 )
 
-const userAgent = "docker-registry-ui"
-
-var paginationRegex = regexp.MustCompile("^<(.*?)>;.*$")
+const userAgent = "registry-ui"
 
 // Client main class.
 type Client struct {
-	url       string
-	verifyTLS bool
-	username  string
-	password  string
-	request   *gorequest.SuperAgent
-	logger    *logrus.Entry
-	mux       sync.Mutex
-	tokens    map[string]string
-	repos     map[string][]string
-	tagCounts map[string]int
-	authURL   string
+	puller         *remote.Puller
+	pusher         *remote.Pusher
+	logger         *logrus.Entry
+	repos          []string
+	tagCountsMux   sync.Mutex
+	tagCounts      map[string]int
+	isCatalogReady bool
+}
+
+type ImageInfo struct {
+	IsImageIndex   bool
+	IsImage        bool
+	ImageRefRepo   string
+	ImageRefTag    string
+	ImageRefDigest string
+	MediaType      string
+	Platforms      string
+	Manifest       map[string]interface{}
+
+	// Image specific
+	ImageSize     int64
+	Created       time.Time
+	ConfigImageID string
+	ConfigFile    map[string]interface{}
 }
 
 // NewClient initialize Client.
-func NewClient(url string, verifyTLS bool, username, password string) *Client {
-	c := &Client{
-		url:       strings.TrimRight(url, "/"),
-		verifyTLS: verifyTLS,
-		username:  username,
-		password:  password,
+func NewClient() *Client {
+	var authOpt remote.Option
+	if viper.GetBool("registry.auth_with_keychain") {
+		authOpt = remote.WithAuthFromKeychain(authn.DefaultKeychain)
+	} else {
+		password := viper.GetString("registry.password")
+		if password == "" {
+			passwdFile := viper.GetString("registry.password_file")
+			if _, err := os.Stat(passwdFile); os.IsNotExist(err) {
+				panic(err)
+			}
+			data, err := os.ReadFile(passwdFile)
+			if err != nil {
+				panic(err)
+			}
+			password = strings.TrimSuffix(string(data[:]), "\n")
+		}
 
-		request:   gorequest.New().TLSClientConfig(&tls.Config{InsecureSkipVerify: !verifyTLS}),
+		authOpt = remote.WithAuth(authn.FromConfig(authn.AuthConfig{
+			Username: viper.GetString("registry.username"), Password: password,
+		}))
+	}
+
+	pageSize := viper.GetInt("performance.catalog_page_size")
+	puller, _ := remote.NewPuller(authOpt, remote.WithUserAgent(userAgent), remote.WithPageSize(pageSize))
+	pusher, _ := remote.NewPusher(authOpt, remote.WithUserAgent(userAgent))
+
+	c := &Client{
+		puller:    puller,
+		pusher:    pusher,
 		logger:    SetupLogging("registry.client"),
-		tokens:    map[string]string{},
-		repos:     map[string][]string{},
+		repos:     []string{},
 		tagCounts: map[string]int{},
 	}
-	resp, _, errs := c.request.Get(c.url+"/v2/").
-		Set("User-Agent", userAgent).End()
-	if len(errs) > 0 {
-		c.logger.Error(errs[0])
-		return nil
-	}
-
-	authHeader := ""
-	if resp.StatusCode == 200 {
-		return c
-	} else if resp.StatusCode == 401 {
-		authHeader = resp.Header.Get("WWW-Authenticate")
-	} else {
-		c.logger.Error(resp.Status)
-		return nil
-	}
-
-	if strings.HasPrefix(authHeader, "Bearer") {
-		r, _ := regexp.Compile(`^Bearer realm="(http.+)",service="(.+)"`)
-		if m := r.FindStringSubmatch(authHeader); len(m) > 0 {
-			c.authURL = fmt.Sprintf("%s?service=%s", m[1], m[2])
-			c.logger.Info("Token auth service discovered at ", c.authURL)
-		}
-		if c.authURL == "" {
-			c.logger.Warn("No token auth service discovered from ", c.url)
-			return nil
-		}
-	} else if strings.HasPrefix(strings.ToLower(authHeader), "basic") {
-		c.request = c.request.SetBasicAuth(c.username, c.password)
-		c.logger.Info("It was discovered the registry is configured with HTTP basic auth.")
-	}
-
 	return c
 }
 
-// getToken get existing or new auth token.
-func (c *Client) getToken(scope string) string {
-	// Check if we have already a token and it's not expired.
-	if token, ok := c.tokens[scope]; ok {
-		resp, _, _ := c.request.Get(c.url+"/v2/").
-			Set("Authorization", fmt.Sprintf("Bearer %s", token)).
-			Set("User-Agent", userAgent).End()
-		if resp != nil && resp.StatusCode == 200 {
-			return token
-		}
-	}
-
-	request := gorequest.New().TLSClientConfig(&tls.Config{InsecureSkipVerify: !c.verifyTLS})
-	resp, data, errs := request.Get(fmt.Sprintf("%s&scope=%s", c.authURL, scope)).
-		SetBasicAuth(c.username, c.password).
-		Set("User-Agent", userAgent).End()
-	if len(errs) > 0 {
-		c.logger.Error(errs[0])
-		return ""
-	}
-	if resp.StatusCode != 200 {
-		c.logger.Error("Failed to get token for scope ", scope, " from ", c.authURL)
-		return ""
-	}
-
-	token := gjson.Get(data, "token").String()
-	// Fix for docker_auth v1.5.0 only
-	if token == "" {
-		token = gjson.Get(data, "access_token").String()
-	}
-
-	c.tokens[scope] = token
-	c.logger.Debugf("Received new token for scope %s", scope)
-
-	return c.tokens[scope]
-}
-
-// callRegistry make an HTTP request to retrieve data from Docker registry.
-func (c *Client) callRegistry(uri, scope, manifestFormat string) (string, gorequest.Response) {
-	// TODO Support OCI manifest https://github.com/opencontainers/image-spec/blob/main/manifest.md
-	// acceptHeader := "application/vnd.oci.image.manifest.v1+json"
-	acceptHeader := fmt.Sprintf("application/vnd.docker.distribution.%s+json", manifestFormat)
-	authHeader := ""
-	if c.authURL != "" {
-		authHeader = fmt.Sprintf("Bearer %s", c.getToken(scope))
-	}
-
-	resp, data, errs := c.request.Get(c.url+uri).
-		Set("Accept", acceptHeader).
-		Set("Authorization", authHeader).
-		Set("User-Agent", userAgent).End()
-	if len(errs) > 0 {
-		c.logger.Error(errs[0])
-		return "", resp
-	}
-
-	c.logger.Debugf("GET %s %s", uri, resp.Status)
-	// Returns 404 when no tags in the repo.
-	if resp.StatusCode != 200 {
-		return "", resp
-	}
-
-	// Ensure Docker-Content-Digest header is present as we use it in various places.
-	// The header is probably in AWS ECR case.
-	digest := resp.Header.Get("Docker-Content-Digest")
-	if digest == "" {
-		// Try to get digest from body instead, should be equal to what would be presented in Docker-Content-Digest.
-		h := crypto.SHA256.New()
-		h.Write([]byte(data))
-		resp.Header.Set("Docker-Content-Digest", fmt.Sprintf("sha256:%x", h.Sum(nil)))
-	}
-	return data, resp
-}
-
-// Namespaces list repo namespaces.
-func (c *Client) Namespaces() []string {
-	namespaces := make([]string, 0, len(c.repos))
-	for k := range c.repos {
-		namespaces = append(namespaces, k)
-	}
-	if !ItemInSlice("library", namespaces) {
-		namespaces = append(namespaces, "library")
-	}
-	sort.Strings(namespaces)
-	return namespaces
-}
-
-// Repositories list repos by namespaces where 'library' is the default one.
-func (c *Client) Repositories(useCache bool) map[string][]string {
-	// Return from cache if available.
-	if len(c.repos) > 0 && useCache {
-		return c.repos
-	}
-
-	c.mux.Lock()
-	defer c.mux.Unlock()
-
-	scope := "registry:catalog:*"
-	uri := "/v2/_catalog"
-	tmp := map[string][]string{}
-	count := 0
+func (c *Client) StartBackgroundJobs() {
+	catalogInterval := viper.GetInt("performance.catalog_refresh_interval")
+	tagsCountInterval := viper.GetInt("performance.tags_count_refresh_interval")
+	isStarted := false
 	for {
-		data, resp := c.callRegistry(uri, scope, "manifest.v2")
-		if data == "" {
+		c.RefreshCatalog()
+		if !isStarted && tagsCountInterval > 0 {
+			// Start after the first catalog refresh
+			go c.CountTags(tagsCountInterval)
+			isStarted = true
+		}
+		if catalogInterval == 0 {
+			c.logger.Warn("Catalog refresh is disabled in the config and will not run anymore.")
 			break
 		}
+		time.Sleep(time.Duration(catalogInterval) * time.Minute)
+	}
 
-		for _, r := range gjson.Get(data, "repositories").Array() {
-			namespace, repo := SplitRepoPath(r.String())
-			tmp[namespace] = append(tmp[namespace], repo)
-			count++
+}
+
+func (c *Client) RefreshCatalog() {
+	ctx := context.Background()
+	start := time.Now()
+	c.logger.Info("[RefreshCatalog] Started reading catalog...")
+	registry, _ := name.NewRegistry(viper.GetString("registry.hostname"))
+	cat, err := c.puller.Catalogger(ctx, registry)
+	if err != nil {
+		c.logger.Errorf("[RefreshCatalog] Error fetching catalog: %s", err)
+		if !c.isCatalogReady {
+			os.Exit(1)
 		}
-
-		// pagination
-		linkHeader := resp.Header.Get("Link")
-		link := paginationRegex.FindStringSubmatch(linkHeader)
-		if len(link) == 2 {
-			// update uri and query next page
-			uri = link[1]
-		} else {
-			// no more pages
-			break
+		return
+	}
+	repos := []string{}
+	// The library itself does retries under the hood.
+	for cat.HasNext() {
+		data, err := cat.Next(ctx)
+		if err != nil {
+			c.logger.Errorf("[RefreshCatalog] Error listing catalog: %s", err)
+		}
+		if data != nil {
+			repos = append(repos, data.Repos...)
+			if !c.isCatalogReady {
+				c.repos = append(c.repos, data.Repos...)
+				c.logger.Debug("[RefreshCatalog] Repo batch received:", data.Repos)
+			}
 		}
 	}
-	c.repos = tmp
-	c.logger.Debugf("Refreshed the catalog of %d repositories.", count)
+
+	if len(repos) > 0 {
+		c.repos = repos
+	} else {
+		c.logger.Warn("[RefreshCatalog] Catalog looks empty, preserving previous list if any.")
+	}
+	c.logger.Debugf("[RefreshCatalog] Catalog: %s", c.repos)
+	c.logger.Infof("[RefreshCatalog] Job complete (%v): %d repos found", time.Since(start), len(c.repos))
+	c.isCatalogReady = true
+}
+
+// IsCatalogReady whether catalog is ready for the first time use
+func (c *Client) IsCatalogReady() bool {
+	return c.isCatalogReady
+}
+
+// GetRepos get all repos
+func (c *Client) GetRepos() []string {
 	return c.repos
 }
 
-// Tags get tags for the repo.
-func (c *Client) Tags(repo string) []string {
-	scope := fmt.Sprintf("repository:%s:*", repo)
-	data, _ := c.callRegistry(fmt.Sprintf("/v2/%s/tags/list", repo), scope, "manifest.v2")
-	var tags []string
-	for _, t := range gjson.Get(data, "tags").Array() {
-		tags = append(tags, t.String())
+// ListTags get tags for the repo
+func (c *Client) ListTags(repoName string) []string {
+	ctx := context.Background()
+	repo, _ := name.NewRepository(viper.GetString("registry.hostname") + "/" + repoName)
+	tags, err := c.puller.List(ctx, repo)
+	if err != nil {
+		c.logger.Errorf("Error listing tags for repo %s: %s", repoName, err)
 	}
+	c.tagCountsMux.Lock()
+	c.tagCounts[repoName] = len(tags)
+	c.tagCountsMux.Unlock()
 	return tags
 }
 
-// ManifestList gets manifest list entries for a tag for the repo.
-func (c *Client) ManifestList(repo, tag string) (string, []gjson.Result) {
-	scope := fmt.Sprintf("repository:%s:*", repo)
-	uri := fmt.Sprintf("/v2/%s/manifests/%s", repo, tag)
-	// If manifest.list.v2 does not exist because it's a normal image,
-	// the registry returns manifest.v1 or manifest.v2 if requested by sha256.
-	info, resp := c.callRegistry(uri, scope, "manifest.list.v2")
-	digest := resp.Header.Get("Docker-Content-Digest")
-	sha256 := ""
-	if digest != "" {
-		sha256 = digest[7:]
+// GetImageInfo get image info by the reference - tag name or digest sha256.
+func (c *Client) GetImageInfo(imageRef string) (ImageInfo, error) {
+	ctx := context.Background()
+	ref, err := name.ParseReference(viper.GetString("registry.hostname") + "/" + imageRef)
+	if err != nil {
+		c.logger.Errorf("Error parsing image reference %s: %s", imageRef, err)
+		return ImageInfo{}, err
 	}
-	c.logger.Debugf(`Received manifest.list.v2 with sha256 "%s" from %s: %s`, sha256, uri, info)
-	return sha256, gjson.Get(info, "manifests").Array()
+	descr, err := c.puller.Get(ctx, ref)
+	if err != nil {
+		c.logger.Errorf("Error fetching image reference %s: %s", imageRef, err)
+		return ImageInfo{}, err
+	}
+
+	ii := ImageInfo{
+		ImageRefRepo:   ref.Context().RepositoryStr(),
+		ImageRefTag:    ref.Identifier(),
+		ImageRefDigest: descr.Digest.String(),
+		MediaType:      string(descr.MediaType),
+	}
+	if descr.MediaType.IsIndex() {
+		ii.IsImageIndex = true
+	} else if descr.MediaType.IsImage() {
+		ii.IsImage = true
+	} else {
+		c.logger.Errorf("Image reference %s is neither Index nor Image", imageRef)
+		return ImageInfo{}, err
+	}
+
+	if ii.IsImage {
+		img, _ := descr.Image()
+		cfg, err := img.ConfigFile()
+		if err != nil {
+			c.logger.Errorf("Cannot fetch ConfigFile for image reference %s: %s", imageRef, err)
+			return ImageInfo{}, err
+		}
+		ii.Created = cfg.Created.Time
+		ii.Platforms = getPlatform(cfg.Platform())
+		ii.ConfigFile = structToMap(cfg)
+		// ImageID is what is shown in the terminal when doing "docker images".
+		// This is a config sha256 of the corresponding image manifest (single platform).
+		if x, _ := img.ConfigName(); len(x.String()) > 19 {
+			ii.ConfigImageID = x.String()[7:19]
+		}
+		mf, _ := img.Manifest()
+		for _, l := range mf.Layers {
+			ii.ImageSize += l.Size
+		}
+		ii.Manifest = structToMap(mf)
+	} else if ii.IsImageIndex {
+		// In case of Image Index, if we request for Image() > ConfigFile(), it will be resolved
+		// to a config of one of the manifests (one of the platforms).
+		// It doesn't make a lot of sense, even they are usually identical. Also extra API calls which slows things down.
+		imgIdx, _ := descr.ImageIndex()
+		IdxMf, _ := imgIdx.IndexManifest()
+		platforms := []string{}
+		for _, m := range IdxMf.Manifests {
+			platforms = append(platforms, getPlatform(m.Platform))
+		}
+		ii.Platforms = strings.Join(UniqueSortedSlice(platforms), ", ")
+		ii.Manifest = structToMap(IdxMf)
+	}
+
+	return ii, nil
 }
 
-// TagInfo get image info for the repo tag or digest sha256.
-func (c *Client) TagInfo(repo, tag string, v1only bool) (string, string, string) {
-	scope := fmt.Sprintf("repository:%s:*", repo)
-	uri := fmt.Sprintf("/v2/%s/manifests/%s", repo, tag)
-	// Note, if manifest.v1 does not exist because the image is requested by sha256,
-	// the registry returns manifest.v2 instead or manifest.list.v2 if it's the manifest list!
-	infoV1, _ := c.callRegistry(uri, scope, "manifest.v1")
-	c.logger.Debugf("Received manifest.v1 from %s: %s", uri, infoV1)
-	if infoV1 == "" || v1only {
-		return "", infoV1, ""
+func getPlatform(p *v1.Platform) string {
+	if p != nil {
+		return p.String()
 	}
-
-	// Note, if manifest.v2 does not exist because the image is in the older format (Docker 1.9),
-	// the registry returns manifest.v1 instead or manifest.list.v2 if it's the manifest list requested by sha256!
-	infoV2, resp := c.callRegistry(uri, scope, "manifest.v2")
-	c.logger.Debugf("Received manifest.v2 from %s: %s", uri, infoV2)
-	digest := resp.Header.Get("Docker-Content-Digest")
-	if infoV2 == "" || digest == "" {
-		return "", "", ""
-	}
-
-	sha256 := digest[7:]
-	c.logger.Debugf("sha256 for %s/%s is %s", repo, tag, sha256)
-	return sha256, infoV1, infoV2
+	return ""
 }
 
-// TagCounts return map with tag counts.
-func (c *Client) TagCounts() map[string]int {
-	return c.tagCounts
+// structToMap convert struct to map so it can be formatted as HTML table easily
+func structToMap(obj interface{}) map[string]interface{} {
+	var res map[string]interface{}
+	jsonBytes, _ := json.Marshal(obj)
+	json.Unmarshal(jsonBytes, &res)
+	return res
+}
+
+// GetImageCreated get image created time
+func (c *Client) GetImageCreated(imageRef string) time.Time {
+	zeroTime := new(time.Time)
+	ctx := context.Background()
+	ref, err := name.ParseReference(viper.GetString("registry.hostname") + "/" + imageRef)
+	if err != nil {
+		c.logger.Errorf("Error parsing image reference %s: %s", imageRef, err)
+		return *zeroTime
+	}
+	descr, err := c.puller.Get(ctx, ref)
+	if err != nil {
+		c.logger.Errorf("Error fetching image reference %s: %s", imageRef, err)
+		return *zeroTime
+	}
+	// In case of ImageIndex, it is resolved to a random sub-image which should be fine.
+	img, _ := descr.Image()
+	cfg, err := img.ConfigFile()
+	if err != nil {
+		c.logger.Errorf("Cannot fetch ConfigFile for image reference %s: %s", imageRef, err)
+		return *zeroTime
+	}
+	return cfg.Created.Time
+}
+
+// TagCounts return map with tag counts according to the provided list of repos/sub-repos etc.
+func (c *Client) TagCounts(repoPath string, repos []string) map[string]int {
+	counts := map[string]int{}
+	for _, r := range repos {
+		subRepo := r
+		if repoPath != "" {
+			subRepo = repoPath + "/" + r
+		}
+		for k, v := range c.tagCounts {
+			if strings.HasPrefix(k, subRepo) {
+				counts[subRepo] = counts[subRepo] + v
+			}
+		}
+	}
+	return counts
 }
 
 // CountTags count repository tags in background regularly.
-func (c *Client) CountTags(interval uint8) {
+func (c *Client) CountTags(interval int) {
 	for {
 		start := time.Now()
-		c.logger.Info("[CountTags] Calculating image tags...")
-		catalog := c.Repositories(false)
-		for n, repos := range catalog {
-			for _, r := range repos {
-				repoPath := r
-				if n != "library" {
-					repoPath = fmt.Sprintf("%s/%s", n, r)
-				}
-				c.tagCounts[fmt.Sprintf("%s/%s", n, r)] = len(c.Tags(repoPath))
-			}
+		c.logger.Info("[CountTags] Started counting tags...")
+		for _, r := range c.repos {
+			c.ListTags(r)
 		}
 		c.logger.Infof("[CountTags] Job complete (%v).", time.Since(start))
 		time.Sleep(time.Duration(interval) * time.Minute)
@@ -291,33 +303,37 @@ func (c *Client) CountTags(interval uint8) {
 }
 
 // DeleteTag delete image tag.
-func (c *Client) DeleteTag(repo, tag string) {
-	scope := fmt.Sprintf("repository:%s:*", repo)
-	// Get sha256 digest for tag.
-	_, resp := c.callRegistry(fmt.Sprintf("/v2/%s/manifests/%s", repo, tag), scope, "manifest.list.v2")
-
-	if resp.Header.Get("Content-Type") != "application/vnd.docker.distribution.manifest.list.v2+json" {
-		_, resp = c.callRegistry(fmt.Sprintf("/v2/%s/manifests/%s", repo, tag), scope, "manifest.v2")
+func (c *Client) DeleteTag(repoPath, tag string) {
+	ctx := context.Background()
+	imageRef := repoPath + ":" + tag
+	ref, err := name.ParseReference(viper.GetString("registry.hostname") + "/" + imageRef)
+	if err != nil {
+		c.logger.Errorf("Error parsing image reference %s: %s", imageRef, err)
+		return
+	}
+	// Get manifest so we have a digest to delete by
+	descr, err := c.puller.Get(ctx, ref)
+	if err != nil {
+		c.logger.Errorf("Error fetching image reference %s: %s", imageRef, err)
+		return
+	}
+	// Parse image reference by digest now
+	imageRefDigest := ref.Context().RepositoryStr() + "@" + descr.Digest.String()
+	ref, err = name.ParseReference(viper.GetString("registry.hostname") + "/" + imageRefDigest)
+	if err != nil {
+		c.logger.Errorf("Error parsing image reference %s: %s", imageRefDigest, err)
+		return
 	}
 
-	// Delete by manifest digest reference.
-	authHeader := ""
-	if c.authURL != "" {
-		authHeader = fmt.Sprintf("Bearer %s", c.getToken(scope))
+	// Delete tag using digest.
+	// Note, it will also delete any other tags pointing to the same digest!
+	err = c.pusher.Delete(ctx, ref)
+	if err != nil {
+		c.logger.Errorf("Error deleting image %s: %s", imageRef, err)
+		return
 	}
-	uri := fmt.Sprintf("/v2/%s/manifests/%s", repo, resp.Header.Get("Docker-Content-Digest"))
-	resp, _, errs := c.request.Delete(c.url+uri).
-		Set("Authorization", authHeader).
-		Set("User-Agent", userAgent).End()
-	if len(errs) > 0 {
-		c.logger.Error(errs[0])
-	} else {
-		// Returns 202 on success.
-		if !strings.Contains(repo, "/") {
-			c.tagCounts["library/"+repo]--
-		} else {
-			c.tagCounts[repo]--
-		}
-		c.logger.Infof("DELETE %s (tag:%s) %s", uri, tag, resp.Status)
-	}
+	c.tagCountsMux.Lock()
+	c.tagCounts[repoPath]--
+	c.tagCountsMux.Unlock()
+	c.logger.Infof("Image %s has been successfully deleted.", imageRef)
 }

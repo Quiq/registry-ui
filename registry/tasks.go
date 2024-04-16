@@ -9,27 +9,20 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/viper"
 	"github.com/tidwall/gjson"
 )
 
-type PurgeTagsConfig struct {
-	DryRun        bool
-	KeepDays      int
-	KeepMinCount  int
-	KeepTagRegexp string
-	KeepFromFile  string
-}
-
-type tagData struct {
+type TagData struct {
 	name    string
 	created time.Time
 }
 
-func (t tagData) String() string {
+func (t TagData) String() string {
 	return fmt.Sprintf(`"%s <%s>"`, t.name, t.created.Format("2006-01-02 15:04:05"))
 }
 
-type timeSlice []tagData
+type timeSlice []TagData
 
 func (p timeSlice) Len() int {
 	return len(p)
@@ -37,7 +30,7 @@ func (p timeSlice) Len() int {
 
 func (p timeSlice) Less(i, j int) bool {
 	// reverse sort tags on name if equal dates (OCI image case)
-	// see https://github.com/Quiq/docker-registry-ui/pull/62
+	// see https://github.com/Quiq/registry-ui/pull/62
 	if p[i].created.Equal(p[j].created) {
 		return p[i].name > p[j].name
 	}
@@ -49,81 +42,74 @@ func (p timeSlice) Swap(i, j int) {
 }
 
 // PurgeOldTags purge old tags.
-func PurgeOldTags(client *Client, config *PurgeTagsConfig, purgeFromRepos string) {
+func PurgeOldTags(client *Client, purgeDryRun bool, purgeFromRepos string) {
 	logger := SetupLogging("registry.tasks.PurgeOldTags")
 
-	var keepTagsFromFile gjson.Result
-	if config.KeepFromFile != "" {
-		if _, err := os.Stat(config.KeepFromFile); os.IsNotExist(err) {
-			logger.Warnf("Cannot open %s: %s", config.KeepFromFile, err)
+	var dataFromFile gjson.Result
+	keepFromFile := viper.GetString("purge_tags.keep_from_file")
+	if keepFromFile != "" {
+		if _, err := os.Stat(keepFromFile); os.IsNotExist(err) {
+			logger.Warnf("Cannot open %s: %s", keepFromFile, err)
 			logger.Error("Not purging anything!")
 			return
 		}
-		data, err := os.ReadFile(config.KeepFromFile)
+		data, err := os.ReadFile(keepFromFile)
 		if err != nil {
-			logger.Warnf("Cannot read %s: %s", config.KeepFromFile, err)
+			logger.Warnf("Cannot read %s: %s", keepFromFile, err)
 			logger.Error("Not purging anything!")
 			return
 		}
-		keepTagsFromFile = gjson.ParseBytes(data)
+		dataFromFile = gjson.ParseBytes(data)
 	}
 
 	dryRunText := ""
-	if config.DryRun {
+	if purgeDryRun {
 		logger.Warn("Dry-run mode enabled.")
 		dryRunText = "skipped"
 	}
 
-	catalog := map[string][]string{}
+	catalog := []string{}
 	if purgeFromRepos != "" {
 		logger.Infof("Working on repositories [%s] to scan their tags and creation dates...", purgeFromRepos)
-		for _, p := range strings.Split(purgeFromRepos, ",") {
-			namespace, repo := SplitRepoPath(p)
-			catalog[namespace] = append(catalog[namespace], repo)
-		}
+		catalog = append(catalog, strings.Split(purgeFromRepos, ",")...)
 	} else {
 		logger.Info("Scanning registry for repositories, tags and their creation dates...")
-		catalog = client.Repositories(true)
+		client.RefreshCatalog()
+		catalog = client.GetRepos()
 	}
 
 	now := time.Now().UTC()
 	repos := map[string]timeSlice{}
 	count := 0
-	for namespace := range catalog {
-		count = count + len(catalog[namespace])
-		for _, repo := range catalog[namespace] {
-			if namespace != "library" {
-				repo = fmt.Sprintf("%s/%s", namespace, repo)
-			}
-
-			tags := client.Tags(repo)
-			if len(tags) == 0 {
+	for _, repo := range catalog {
+		tags := client.ListTags(repo)
+		if len(tags) == 0 {
+			continue
+		}
+		logger.Infof("[%s] scanning %d tags...", repo, len(tags))
+		for _, tag := range tags {
+			imageRef := repo + ":" + tag
+			created := client.GetImageCreated(imageRef)
+			if created.IsZero() {
+				// Image manifest with zero creation time, e.g. cosign one
+				logger.Debugf("[%s] tag with zero creation time: %s", repo, tag)
 				continue
 			}
-			logger.Infof("[%s] scanning %d tags...", repo, len(tags))
-			for _, tag := range tags {
-				_, infoV1, _ := client.TagInfo(repo, tag, true)
-				if infoV1 == "" {
-					logger.Errorf("[%s] missing manifest v1 for tag %s", repo, tag)
-					continue
-				}
-				created := gjson.Get(gjson.Get(infoV1, "history.0.v1Compatibility").String(), "created").Time()
-				if created.IsZero() {
-					// OCI manifest w/o creation time or any other case with zero time
-					continue
-				}
-				repos[repo] = append(repos[repo], tagData{name: tag, created: created})
-			}
+			repos[repo] = append(repos[repo], TagData{name: tag, created: created})
 		}
 	}
 
-	logger.Infof("Scanned %d repositories.", count)
-	logger.Infof("Filtering out tags for purging: keep %d days, keep count %d", config.KeepDays, config.KeepMinCount)
-	if config.KeepTagRegexp != "" {
-		logger.Infof("Keeping tags matching regexp: %s", config.KeepTagRegexp)
+	logger.Infof("Scanned %d repositories.", len(catalog))
+
+	keepDays := viper.GetInt("purge_tags.keep_days")
+	keepCount := viper.GetInt("purge_tags.keep_count")
+	logger.Infof("Filtering out tags for purging: keep %d days, keep count %d", keepDays, keepCount)
+	keepRegexp := viper.GetString("purge_tags.keep_regexp")
+	if keepRegexp != "" {
+		logger.Infof("Keeping tags matching regexp: %s", keepRegexp)
 	}
-	if config.KeepFromFile != "" {
-		logger.Infof("Keeping tags for repos from the file: %+v", keepTagsFromFile)
+	if keepFromFile != "" {
+		logger.Infof("Keeping tags for repos from the file: %+v", dataFromFile)
 	}
 	purgeTags := map[string][]string{}
 	keepTags := map[string][]string{}
@@ -134,19 +120,19 @@ func PurgeOldTags(client *Client, config *PurgeTagsConfig, purgeFromRepos string
 
 		// Prep the list of tags to preserve if defined in the file
 		tagsFromFile := []string{}
-		for _, i := range keepTagsFromFile.Get(repo).Array() {
+		for _, i := range dataFromFile.Get(repo).Array() {
 			tagsFromFile = append(tagsFromFile, i.String())
 		}
 
 		// Filter out tags
 		for _, tag := range repos[repo] {
 			daysOld := int(now.Sub(tag.created).Hours() / 24)
-			keepByRegexp := false
-			if config.KeepTagRegexp != "" {
-				keepByRegexp, _ = regexp.MatchString(config.KeepTagRegexp, tag.name)
+			matchByRegexp := false
+			if keepRegexp != "" {
+				matchByRegexp, _ = regexp.MatchString(keepRegexp, tag.name)
 			}
 
-			if daysOld > config.KeepDays && !keepByRegexp && !ItemInSlice(tag.name, tagsFromFile) {
+			if daysOld > keepDays && !matchByRegexp && !ItemInSlice(tag.name, tagsFromFile) {
 				purgeTags[repo] = append(purgeTags[repo], tag.name)
 			} else {
 				keepTags[repo] = append(keepTags[repo], tag.name)
@@ -154,9 +140,9 @@ func PurgeOldTags(client *Client, config *PurgeTagsConfig, purgeFromRepos string
 		}
 
 		// Keep minimal count of tags no matter how old they are.
-		if len(keepTags[repo]) < config.KeepMinCount {
+		if len(keepTags[repo]) < keepCount {
 			// At least "threshold"-"keep" but not more than available for "purge".
-			takeFromPurge := int(math.Min(float64(config.KeepMinCount-len(keepTags[repo])), float64(len(purgeTags[repo]))))
+			takeFromPurge := int(math.Min(float64(keepCount-len(keepTags[repo])), float64(len(purgeTags[repo]))))
 			keepTags[repo] = append(keepTags[repo], purgeTags[repo][:takeFromPurge]...)
 			purgeTags[repo] = purgeTags[repo][takeFromPurge:]
 		}
@@ -177,7 +163,7 @@ func PurgeOldTags(client *Client, config *PurgeTagsConfig, purgeFromRepos string
 			continue
 		}
 		logger.Infof("[%s] Purging %d tags... %s", repo, len(purgeTags[repo]), dryRunText)
-		if config.DryRun {
+		if purgeDryRun {
 			continue
 		}
 		for _, tag := range purgeTags[repo] {

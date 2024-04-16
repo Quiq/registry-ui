@@ -1,69 +1,84 @@
 # Listen interface.
 listen_addr: 0.0.0.0:8000
-# Base path of Docker Registry UI.
-base_path: /
 
-# Registry URL with schema and port.
-registry_url: https://docker-registry.local
-# Verify TLS certificate when using https.
-verify_tls: true
+# Base path of Registry UI.
+uri_base_path: /
 
-# Docker registry credentials.
-# They need to have a full access to the registry.
-# If token authentication service is enabled, it will be auto-discovered and those credentials
-# will be used to obtain access tokens.
-# When the registry_password_file entry is used, the password can be passed as a docker secret
-# and read from file. This overides the registry_password entry.
-registry_username: user
-registry_password: pass
-# registry_password_file: /run/secrets/registry_password_file
+# Background tasks.
+performance:
+  # Catalog list page size. It depends from the underlying storage performance.
+  catalog_page_size: 100
 
-# Event listener token.
-# The same one should be configured on Docker registry as Authorization Bearer token.
-event_listener_token: token
-# Retention of records to keep.
-event_retention_days: 7
+  # Catalog (repo list) refresh interval in minutes.
+  # If set to 0 it will never refresh but will run once.
+  catalog_refresh_interval: 10
 
-# Event listener storage.
-event_database_driver: sqlite3
-event_database_location: data/registry_events.db
-# event_database_driver: mysql
-# event_database_location: user:password@tcp(localhost:3306)/docker_events
+  # Tags counting refresh interval in minutes.
+  # If set to 0 it will never run. This is fast operation.
+  tags_count_refresh_interval: 60
 
-# You can disable event deletion on some hosts when you are running docker-registry on master-master or
-# cluster setup to avoid deadlocks or replication break.
-event_deletion_enabled: true
+# Registry endpoint and authentication.
+registry:
+  # Registry hostname (without protocol but may include port).
+  hostname: docker-registry.local
 
-# Cache refresh interval in minutes.
-# How long to cache repository list and tag counts.
-cache_refresh_interval: 10
+  # Registry credentials.
+  # They need to have a full access to the registry.
+  # If token authentication service is enabled, it will be auto-discovered and those credentials
+  # will be used to obtain access tokens.
+  username: user
+  password: pass
+  # Set password to '' in order to read it from the file below. Otherwise, it is ignored.
+  password_file: /run/secrets/registry_password_file
 
-# If all users can view the event log. If set to false, then only admins listed below.
-anyone_can_view_events: true
-# If all users can delete tags. If set to false, then only admins listed below.
-anyone_can_delete: false
-# Users allowed to delete tags.
-# This should be sent via X-WEBAUTH-USER header from your proxy.
-admins: []
+  # Alternatively, you can do auth with Keychain, useful for local development.
+  # When enabled the above credentials will not be used.
+  auth_with_keychain: false
 
-# Debug mode. Affects only templates.
-debug: true
+# UI access management.
+access_control:
+  # Whether users can the event log. Otherwise, only admins listed below.
+  anyone_can_view_events: true
+  # Whether users can delete tags. Otherwise, only admins listed below.
+  anyone_can_delete_tags: false
+  # The list of users to do everything.
+  # User identifier should be set via X-WEBAUTH-USER header from your proxy
+  # because registry UI itself does not employ any auth.
+  admins: []
 
-# How many days to keep tags but also keep the minimal count provided no matter how old.
-purge_tags_keep_days: 90
-purge_tags_keep_count: 2
+# Event listener configuration.
+event_listener:
+  # The same token should be configured on Docker registry as Authorization Bearer token.
+  bearer_token: xxx
+  # Retention of records to keep.
+  retention_days: 7
 
-# Keep tags matching regexp no matter how old, e.g. '^latest$'
-# Empty string disables this feature.
-purge_tags_keep_regexp: ''
+  # Event listener storage.
+  database_driver: sqlite3
+  database_location: data/registry_events.db
+  # database_driver: mysql
+  # database_location: user:password@tcp(localhost:3306)/docker_events
 
-# Keep tags listed in the file no matter how old.
-# File format is JSON: {"repo1": ["tag1", "tag2"], "repoX": ["tagX"]}
-# Empty string disables this feature.
-purge_tags_keep_from_file: ''
+  # You can disable event deletion on some hosts when you are running registry UI on MySQL master-master or
+  # cluster setup to avoid deadlocks or replication breaks.
+  deletion_enabled: true
 
-# Enable built-in cron to schedule purging tags in server mode.
-# Empty string disables this feature.
-# Example: '25 54 17 * * *' will run it at 17:54:25 daily.
-# Note, the cron schedule format includes seconds! See https://godoc.org/github.com/robfig/cron
-purge_tags_schedule: ''
+# Options for tag purging.
+purge_tags:
+  # How many days to keep tags but also keep the minimal count provided no matter how old.
+  keep_days: 90
+  keep_count: 10
+
+  # Keep tags matching regexp no matter how old, e.g. '^latest$'
+  # Empty string disables this feature.
+  keep_regexp: ''
+
+  # Keep tags listed in the file no matter how old.
+  # File format is JSON: {"repo1": ["tag1", "tag2"], "repoX": ["tagX"]}
+  # Empty string disables this feature.
+  keep_from_file: ''
+
+# Debug mode.
+debug:
+  # Affects only templates.
+  templates: false

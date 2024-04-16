@@ -1,4 +1,4 @@
-FROM golang:1.22.0-alpine3.19 as builder
+FROM golang:1.22.1-alpine3.19 as builder
 
 RUN apk update && \
     apk add ca-certificates git bash gcc musl-dev
@@ -9,7 +9,7 @@ ADD registry registry
 ADD *.go go.mod go.sum ./
 
 RUN go test -v ./registry && \
-    go build -o /opt/docker-registry-ui *.go
+    go build -o /opt/registry-ui *.go
 
 
 FROM alpine:3.19
@@ -21,7 +21,7 @@ RUN apk add --no-cache ca-certificates tzdata && \
 
 ADD templates /opt/templates
 ADD static /opt/static
-COPY --from=builder /opt/docker-registry-ui /opt/
+COPY --from=builder /opt/registry-ui /opt/
 
 USER nobody
-ENTRYPOINT ["/opt/docker-registry-ui"]
+ENTRYPOINT ["/opt/registry-ui"]

@@ -3,13 +3,12 @@ package main
 import (
 	"fmt"
 	"io"
-	"net/url"
 	"time"
 
-	"github.com/CloudyKit/jet"
+	"github.com/CloudyKit/jet/v6"
 	"github.com/labstack/echo/v4"
-	"github.com/quiq/docker-registry-ui/registry"
-	"github.com/tidwall/gjson"
+	"github.com/quiq/registry-ui/registry"
+	"github.com/spf13/viper"
 )
 
 // Template Jet template.
@@ -35,45 +34,45 @@ func (r *Template) Render(w io.Writer, name string, data interface{}, c echo.Con
 }
 
 // setupRenderer template engine init.
-func setupRenderer(debug bool, registryHost, basePath string) *Template {
-	view := jet.NewHTMLSet("templates")
-	view.SetDevelopmentMode(debug)
+func setupRenderer(basePath string) *Template {
+	var opts []jet.Option
+	if viper.GetBool("debug.templates") {
+		opts = append(opts, jet.InDevelopmentMode())
+	}
+	view := jet.NewSet(jet.NewOSFileSystemLoader("templates"), opts...)
 
 	view.AddGlobal("version", version)
 	view.AddGlobal("basePath", basePath)
-	view.AddGlobal("registryHost", registryHost)
-	view.AddGlobal("pretty_size", func(size interface{}) string {
-		var value float64
-		switch i := size.(type) {
-		case gjson.Result:
-			value = float64(i.Int())
+	view.AddGlobal("registryHost", viper.GetString("registry.hostname"))
+	view.AddGlobal("pretty_size", func(val interface{}) string {
+		var s float64
+		switch i := val.(type) {
 		case int64:
-			value = float64(i)
+			s = float64(i)
+		case float64:
+			s = i
+		default:
+			fmt.Printf("Unhandled type when calling pretty_size(): %T\n", i)
 		}
-		return registry.PrettySize(value)
+		return registry.PrettySize(s)
 	})
-	view.AddGlobal("pretty_time", func(timeVal interface{}) string {
-		t, err := time.Parse("2006-01-02T15:04:05Z", timeVal.(string))
-		if err != nil {
-			// mysql case
-			t, _ = time.Parse("2006-01-02 15:04:05", timeVal.(string))
+	view.AddGlobal("pretty_time", func(val interface{}) string {
+		var t time.Time
+		switch i := val.(type) {
+		case string:
+			var err error
+			t, err = time.Parse("2006-01-02T15:04:05Z", i)
+			if err != nil {
+				// mysql case
+				t, _ = time.Parse("2006-01-02 15:04:05", i)
+			}
+		default:
+			t = i.(time.Time)
 		}
 		return t.In(time.Local).Format("2006-01-02 15:04:05 MST")
 	})
-	view.AddGlobal("parse_map", func(m interface{}) string {
-		var res string
-		for _, k := range registry.SortedMapKeys(m) {
-			res = res + fmt.Sprintf(`<tr><td style="padding: 0 10px; width: 20%%">%s</td><td style="padding: 0 10px">%v</td></tr>`, k, m.(map[string]interface{})[k])
-		}
-		return res
+	view.AddGlobal("sort_map_keys", func(m interface{}) []string {
+		return registry.SortedMapKeys(m)
 	})
-	view.AddGlobal("url_decode", func(m interface{}) string {
-		res, err := url.PathUnescape(m.(string))
-		if err != nil {
-			return m.(string)
-		}
-		return res
-	})
-
 	return &Template{View: view}
 }

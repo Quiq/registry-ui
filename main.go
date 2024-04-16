@@ -3,35 +3,36 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net/url"
+	"path/filepath"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/quiq/docker-registry-ui/events"
-	"github.com/quiq/docker-registry-ui/registry"
-	"github.com/robfig/cron"
+	"github.com/quiq/registry-ui/events"
+	"github.com/quiq/registry-ui/registry"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 type apiClient struct {
 	client        *registry.Client
 	eventListener *events.EventListener
-	config        *configData
 }
 
 func main() {
 	var (
 		a apiClient
 
-		configFile, loggingLevel, purgeFromRepos string
-		disableCountTags, purgeTags, purgeDryRun bool
+		configFile, loggingLevel string
+		purgeFromRepos           string
+		purgeTags, purgeDryRun   bool
 	)
 	flag.StringVar(&configFile, "config-file", "config.yml", "path to the config file")
 	flag.StringVar(&loggingLevel, "log-level", "info", "logging level")
-	flag.BoolVar(&disableCountTags, "disable-count-tags", false, "disable counting of tags if it is very slow")
+
 	flag.BoolVar(&purgeTags, "purge-tags", false, "purge old tags instead of running a web server")
-	flag.StringVar(&purgeFromRepos, "purge-from-repos", "", "comma-separated list of repos to purge instead of all")
 	flag.BoolVar(&purgeDryRun, "dry-run", false, "dry-run for purging task, does not delete anything")
+	flag.StringVar(&purgeFromRepos, "purge-from-repos", "", "comma-separated list of repos to purge instead of all")
 	flag.Parse()
 
 	// Setup logging
@@ -42,72 +43,61 @@ func main() {
 	}
 
 	// Read config file
-	a.config = readConfig(configFile)
-	a.config.PurgeConfig.DryRun = purgeDryRun
+	viper.SetConfigName(strings.Split(filepath.Base(configFile), ".")[0])
+	viper.AddConfigPath(filepath.Dir(configFile))
+	viper.AddConfigPath(".")
+	err := viper.ReadInConfig()
+	if err != nil {
+		panic(fmt.Errorf("fatal error reading config file: %w", err))
+	}
 
 	// Init registry API client.
-	a.client = registry.NewClient(a.config.RegistryURL, a.config.VerifyTLS, a.config.Username, a.config.Password)
-	if a.client == nil {
-		panic(fmt.Errorf("cannot initialize api client or unsupported auth method"))
-	}
-
-	purgeFunc := func() {
-		registry.PurgeOldTags(a.client, a.config.PurgeConfig, purgeFromRepos)
-	}
+	a.client = registry.NewClient()
 
 	// Execute CLI task and exit.
 	if purgeTags {
-		purgeFunc()
+		registry.PurgeOldTags(a.client, purgeDryRun, purgeFromRepos)
 		return
 	}
 
-	// Schedules to purge tags.
-	if a.config.PurgeTagsSchedule != "" {
-		c := cron.New()
-		if err := c.AddFunc(a.config.PurgeTagsSchedule, purgeFunc); err != nil {
-			panic(fmt.Errorf("invalid schedule format: %s", a.config.PurgeTagsSchedule))
-		}
-		c.Start()
-	}
-
-	// Count tags in background.
-	if !disableCountTags {
-		go a.client.CountTags(a.config.CacheRefreshInterval)
-	}
-
-	if a.config.EventDatabaseDriver != "sqlite3" && a.config.EventDatabaseDriver != "mysql" {
-		panic(fmt.Errorf("event_database_driver should be either sqlite3 or mysql"))
-	}
-	a.eventListener = events.NewEventListener(
-		a.config.EventDatabaseDriver, a.config.EventDatabaseLocation, a.config.EventRetentionDays, a.config.EventDeletionEnabled,
-	)
+	go a.client.StartBackgroundJobs()
+	a.eventListener = events.NewEventListener()
 
 	// Template engine init.
 	e := echo.New()
-	registryHost, _ := url.Parse(a.config.RegistryURL) // validated already in config.go
-	e.Renderer = setupRenderer(a.config.Debug, registryHost.Host, a.config.BasePath)
+	// e.Use(middleware.Logger())
+	e.Use(loggingMiddleware())
+	e.Use(recoverMiddleware())
+
+	basePath := viper.GetString("uri_base_path")
+	// Normalize base path.
+	basePath = strings.Trim(basePath, "/")
+	if basePath != "" {
+		basePath = "/" + basePath
+	}
+	e.Renderer = setupRenderer(basePath)
 
 	// Web routes.
 	e.File("/favicon.ico", "static/favicon.ico")
-	e.Static(a.config.BasePath+"/static", "static")
-	if a.config.BasePath != "" {
-		e.GET(a.config.BasePath, a.viewRepositories)
+	e.Static(basePath+"/static", "static")
+
+	p := e.Group(basePath)
+	if basePath != "" {
+		e.GET(basePath, a.viewCatalog)
 	}
-	e.GET(a.config.BasePath+"/", a.viewRepositories)
-	e.GET(a.config.BasePath+"/:namespace", a.viewRepositories)
-	e.GET(a.config.BasePath+"/:namespace/:repo", a.viewTags)
-	e.GET(a.config.BasePath+"/:namespace/:repo/:tag", a.viewTagInfo)
-	e.GET(a.config.BasePath+"/:namespace/:repo/:tag/delete", a.deleteTag)
-	e.GET(a.config.BasePath+"/events", a.viewLog)
+	p.GET("/", a.viewCatalog)
+	p.GET("/:repoPath", a.viewCatalog)
+	p.GET("/event-log", a.viewEventLog)
+	p.GET("/delete-tag", a.deleteTag)
 
 	// Protected event listener.
-	p := e.Group(a.config.BasePath + "/api")
-	p.Use(middleware.KeyAuthWithConfig(middleware.KeyAuthConfig{
+	pp := e.Group("/event-receiver")
+	pp.Use(middleware.KeyAuthWithConfig(middleware.KeyAuthConfig{
 		Validator: middleware.KeyAuthValidator(func(token string, c echo.Context) (bool, error) {
-			return token == a.config.EventListenerToken, nil
+			return token == viper.GetString("event_listener.bearer_token"), nil
 		}),
 	}))
-	p.POST("/events", a.receiveEvents)
+	pp.POST("", a.receiveEvents)
 
-	e.Logger.Fatal(e.Start(a.config.ListenAddr))
+	e.Logger.Fatal(e.Start(viper.GetString("listen_addr")))
 }

@@ -1,0 +1,121 @@
+{{extends "base.html"}}
+{{import "breadcrumb.html"}}
+
+{{block head()}}
+<script type="text/javascript" src="{{ basePath }}/static/js/bootstrap-confirmation.min.js"></script>
+<script type="text/javascript" src="{{ basePath }}/static/js/sorting_natural.js"></script>
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#datatable_repos').DataTable({
+            "pageLength": 10,
+            "stateSave": true,
+            "language": {
+                "emptyTable": "Catalog is being initializing..."
+            }
+        });
+
+        $('#datatable_tags').DataTable({
+            "pageLength": 10,
+            "order": [[ 0, 'desc' ]],
+            "stateSave": true,
+            columnDefs: [
+              { type: 'natural', targets: 0 }
+            ],
+            "language": {
+                "emptyTable": "No tags."
+            }
+        })
+        function populateConfirmation()  {
+            $('[data-toggle=confirmation]').confirmation({
+                rootSelector: '[data-toggle=confirmation]',
+                container: 'body'
+            });
+        }
+        populateConfirmation()
+        $('#datatable_tags').on('draw.dt', populateConfirmation)
+    });
+</script>
+{{end}}
+
+{{block body()}}
+<ol class="breadcrumb">
+    {{ yield breadcrumb() repoPath }}
+</ol>
+
+{{if len(repos)>0 || !isCatalogReady}}
+<h4>List of Repositories</h4>
+<table id="datatable_repos" class="table table-striped table-bordered dataTables_wrapper">
+    <thead bgcolor="#ddd">
+        <tr>
+            <th>Repository</th>
+            <th width="20%">Tags</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{range _, repo := repos}}
+            {{ full_repo_path := repoPath != "" ? repoPath+"/"+repo : repo }}
+            {{if !isset(tagCounts[full_repo_path]) || (isset(tagCounts[full_repo_path]) && tagCounts[full_repo_path] > 0)}}
+            <tr>
+                <td><i class="bi bi-folder2" style="margin-right: 10px"></i> <a href="{{ basePath }}/{{ full_repo_path }}">{{ repo }}</a></td>
+                <td>{{ tagCounts[full_repo_path] }}</td>
+            </tr>
+            {{end}}
+        {{end}}
+    </tbody>
+</table>
+{{end}} {* end repos *}
+
+{{if len(tags)>0}}
+<h4>List of Tags</h4>
+<table id="datatable_tags" class="table table-striped table-bordered">
+    <thead bgcolor="#ddd">
+        <tr>
+            <th>Tag Name</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{range _, tag := tags}}
+        <tr>
+            <td>
+                <i class="bi bi-file-text" style="margin-right: 10px"></i> <a href="{{ basePath }}/{{ repoPath }}:{{ tag }}">{{ tag }}</a>
+                {{if deleteAllowed}}
+                <a href="{{ basePath }}/delete-tag?repoPath={{ repoPath }}&tag={{ tag }}" data-toggle="confirmation" class="btn btn-danger btn-xs pull-right" role="button">Delete</a>
+                {{end}}
+            </td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+{{end}} {* end tags *}
+
+{{if eventsAllowed and isset(events) }}
+<h4>Latest activity</h4>
+<table id="datatable_events" class="table table-striped table-bordered">
+    <thead bgcolor="#ddd">
+        <tr>
+            <th>Action</th>
+            <th>Image</th>
+            <th>IP Address</th>
+            <th>User</th>
+            <th>Time</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{range _, e := events}}
+            <tr>
+                <td>{{ e.Action }}</td>
+                {{if hasPrefix(e.Tag,"sha256") }}
+                <td title="{{ e.Tag }}">{{ e.Repository }}@{{ e.Tag[:19] }}...</td>
+                {{else}}
+                <td>{{ e.Repository }}:{{ e.Tag }}</td>
+                {{end}}
+                <td>{{ e.IP }}</td>
+                <td>{{ e.User }}</td>
+                <td>{{ e.Created|pretty_time }}</td>
+            </tr>
+        {{end}}
+    </tbody>
+</table>
+{{end}}
+
+{{end}}

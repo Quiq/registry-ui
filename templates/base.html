@@ -4,19 +4,20 @@
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Docker Registry UI</title>
-        <link rel="stylesheet" type="text/css" href="{{ basePath }}/static/datatables.min.css"/>
-        <script type="text/javascript" src="{{ basePath }}/static/datatables.min.js"></script>
+        <title>Registry UI</title>
+        <link rel="stylesheet" type="text/css" href="{{ basePath }}/static/css/bootstrap-icons.min.css">
+        <link rel="stylesheet" type="text/css" href="{{ basePath }}/static/css/datatables.min.css"/>
+        <script type="text/javascript" src="{{ basePath }}/static/js/datatables.min.js"></script>
         {{yield head()}}
     </head>
     <body>
         <div class="container">
             <div style="float: left">
-                <h2><a href="{{ basePath }}/" style="text-decoration: none">Docker Registry UI</a></h2>
+                <h2><a href="{{ basePath }}/" style="text-decoration: none"><i class="bi-journals"></i> Registry UI</a></h2>
             </div>
             {{if eventsAllowed}}
             <div style="float: right">
-                <h4><a href="{{ basePath }}/events">Event Log</a></h4>
+                <h4><a href="{{ basePath }}/event-log" style="text-decoration: none"><i class="bi-calendar-week"></i> Event Log</a></h4>
             </div>
             {{end}}
             <div style="clear: both"></div>
@@ -25,7 +26,7 @@
 
             <div style="padding: 10px 0; margin-bottom: 20px">
                 <div style="text-align: center; color:darkgrey">
-                    Docker Registry UI v{{version}} | <a href="https://quiq.com">Quiq Inc.</a>
+                    Registry UI v{{version}} | <a href="https://quiq.com" target="_blank">Quiq Inc.</a>
                 </div>
             </div>
         </div>

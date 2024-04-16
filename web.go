@@ -3,13 +3,12 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 
-	"github.com/CloudyKit/jet"
+	"github.com/CloudyKit/jet/v6"
 	"github.com/labstack/echo/v4"
-	"github.com/quiq/docker-registry-ui/registry"
-	"github.com/tidwall/gjson"
+	"github.com/quiq/registry-ui/registry"
+	"github.com/spf13/viper"
 )
 
 const usernameHTTPHeader = "X-WEBAUTH-USER"
@@ -19,166 +18,90 @@ func (a *apiClient) setUserPermissions(c echo.Context) jet.VarMap {
 
 	data := jet.VarMap{}
 	data.Set("user", user)
-	data.Set("eventsAllowed", a.config.AnyoneCanViewEvents || registry.ItemInSlice(user, a.config.Admins))
-	data.Set("deleteAllowed", a.config.AnyoneCanDelete || registry.ItemInSlice(user, a.config.Admins))
+	admins := viper.GetStringSlice("access_control.admins")
+	data.Set("eventsAllowed", viper.GetBool("access_control.anyone_can_view_events") || registry.ItemInSlice(user, admins))
+	data.Set("deleteAllowed", viper.GetBool("access_control.anyone_can_delete_tags") || registry.ItemInSlice(user, admins))
 	return data
 }
 
-func (a *apiClient) viewRepositories(c echo.Context) error {
-	namespace := c.Param("namespace")
-	if namespace == "" {
-		namespace = "library"
-	}
-
-	repos := a.client.Repositories(true)[namespace]
-	data := a.setUserPermissions(c)
-	data.Set("namespace", namespace)
-	data.Set("namespaces", a.client.Namespaces())
-	data.Set("repos", repos)
-	data.Set("tagCounts", a.client.TagCounts())
-
-	return c.Render(http.StatusOK, "repositories.html", data)
-}
-
-func (a *apiClient) viewTags(c echo.Context) error {
-	namespace := c.Param("namespace")
-	repo := c.Param("repo")
-	repoPath := repo
-	if namespace != "library" {
-		repoPath = fmt.Sprintf("%s/%s", namespace, repo)
-	}
-
-	tags := a.client.Tags(repoPath)
+func (a *apiClient) viewCatalog(c echo.Context) error {
+	repoPath := strings.Trim(c.Param("repoPath"), "/")
+	// fmt.Println("repoPath:", repoPath)
 
 	data := a.setUserPermissions(c)
-	data.Set("namespace", namespace)
-	data.Set("repo", repo)
-	data.Set("tags", tags)
-	repoPath, _ = url.PathUnescape(repoPath)
-	data.Set("events", a.eventListener.GetEvents(repoPath))
-
-	return c.Render(http.StatusOK, "tags.html", data)
-}
-
-func (a *apiClient) viewTagInfo(c echo.Context) error {
-	namespace := c.Param("namespace")
-	repo := c.Param("repo")
-	tag := c.Param("tag")
-	repoPath := repo
-	if namespace != "library" {
-		repoPath = fmt.Sprintf("%s/%s", namespace, repo)
-	}
-
-	// Retrieve full image info from various versions of manifests
-	sha256, infoV1, infoV2 := a.client.TagInfo(repoPath, tag, false)
-	sha256list, manifests := a.client.ManifestList(repoPath, tag)
-	if (infoV1 == "" || infoV2 == "") && len(manifests) == 0 {
-		return c.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/%s/%s", a.config.BasePath, namespace, repo))
-	}
-
-	created := gjson.Get(gjson.Get(infoV1, "history.0.v1Compatibility").String(), "created").String()
-	isDigest := strings.HasPrefix(tag, "sha256:")
-	if len(manifests) > 0 {
-		sha256 = sha256list
-	}
-
-	// Gather layers v2
-	var layersV2 []map[string]gjson.Result
-	for _, s := range gjson.Get(infoV2, "layers").Array() {
-		layersV2 = append(layersV2, s.Map())
-	}
-
-	// Gather layers v1
-	var layersV1 []map[string]interface{}
-	for _, s := range gjson.Get(infoV1, "history.#.v1Compatibility").Array() {
-		m, _ := gjson.Parse(s.String()).Value().(map[string]interface{})
-		// Sort key in the map to show the ordered on UI.
-		m["ordered_keys"] = registry.SortedMapKeys(m)
-		layersV1 = append(layersV1, m)
-	}
-
-	// Count image size
-	var imageSize int64
-	if gjson.Get(infoV2, "layers").Exists() {
-		for _, s := range gjson.Get(infoV2, "layers.#.size").Array() {
-			imageSize = imageSize + s.Int()
-		}
-	} else {
-		for _, s := range gjson.Get(infoV2, "history.#.v1Compatibility").Array() {
-			imageSize = imageSize + gjson.Get(s.String(), "Size").Int()
-		}
-	}
-
-	// Count layers
-	layersCount := len(layersV2)
-	if layersCount == 0 {
-		layersCount = len(gjson.Get(infoV1, "fsLayers").Array())
-	}
-
-	// Gather sub-image info of multi-arch or cache image
-	var digestList []map[string]interface{}
-	for _, s := range manifests {
-		r, _ := gjson.Parse(s.String()).Value().(map[string]interface{})
-		if s.Get("mediaType").String() == "application/vnd.docker.distribution.manifest.v2+json" {
-			// Sub-image of the specific arch.
-			_, dInfoV1, _ := a.client.TagInfo(repoPath, s.Get("digest").String(), true)
-			var dSize int64
-			for _, d := range gjson.Get(dInfoV1, "layers.#.size").Array() {
-				dSize = dSize + d.Int()
-			}
-			r["size"] = dSize
-			// Create link here because there is a bug with jet template when referencing a value by map key in the "if" condition under "range".
-			if r["mediaType"] == "application/vnd.docker.distribution.manifest.v2+json" {
-				r["digest"] = fmt.Sprintf(`<a href="%s/%s/%s/%s">%s</a>`, a.config.BasePath, namespace, repo, r["digest"], r["digest"])
-			}
-		} else {
-			// Sub-image of the cache type.
-			r["size"] = s.Get("size").Int()
-		}
-		r["ordered_keys"] = registry.SortedMapKeys(r)
-		digestList = append(digestList, r)
-	}
-
-	// Populate template vars
-	data := a.setUserPermissions(c)
-	data.Set("namespace", namespace)
-	data.Set("repo", repo)
-	data.Set("tag", tag)
 	data.Set("repoPath", repoPath)
-	data.Set("sha256", sha256)
-	data.Set("imageSize", imageSize)
-	data.Set("created", created)
-	data.Set("layersCount", layersCount)
-	data.Set("layersV2", layersV2)
-	data.Set("layersV1", layersV1)
-	data.Set("isDigest", isDigest)
-	data.Set("digestList", digestList)
 
-	return c.Render(http.StatusOK, "tag_info.html", data)
+	showTags := false
+	showImageInfo := false
+	allRepoPaths := a.client.GetRepos()
+	repos := []string{}
+	if repoPath == "" {
+		// Show all repos
+		for _, r := range allRepoPaths {
+			repos = append(repos, strings.Split(r, "/")[0])
+		}
+	} else if strings.Contains(repoPath, ":") {
+		// Show image info
+		showImageInfo = true
+	} else {
+		for _, r := range allRepoPaths {
+			if r == repoPath {
+				// Show tags
+				showTags = true
+			}
+			if strings.HasPrefix(r, repoPath+"/") {
+				// Show sub-repos
+				r = strings.TrimPrefix(r, repoPath+"/")
+				repos = append(repos, strings.Split(r, "/")[0])
+			}
+		}
+	}
+
+	if showImageInfo {
+		// Show image info
+		imageInfo, err := a.client.GetImageInfo(repoPath)
+		if err != nil {
+			basePath := viper.GetString("uri_base_path")
+			return c.Redirect(http.StatusSeeOther, basePath)
+		}
+		data.Set("ii", imageInfo)
+		return c.Render(http.StatusOK, "image_info.html", data)
+	} else {
+		// Show repos, tags or both.
+		repos = registry.UniqueSortedSlice(repos)
+		tags := []string{}
+		if showTags {
+			tags = a.client.ListTags(repoPath)
+
+		}
+		data.Set("repos", repos)
+		data.Set("isCatalogReady", a.client.IsCatalogReady())
+		data.Set("tagCounts", a.client.TagCounts(repoPath, repos))
+		data.Set("tags", tags)
+		if repoPath != "" && (len(repos) > 0 || len(tags) > 0) {
+			// Do not show events in the root of catalog.
+			data.Set("events", a.eventListener.GetEvents(repoPath))
+		}
+		return c.Render(http.StatusOK, "catalog.html", data)
+	}
 }
 
 func (a *apiClient) deleteTag(c echo.Context) error {
-	namespace := c.Param("namespace")
-	repo := c.Param("repo")
-	tag := c.Param("tag")
-	repoPath := repo
-	if namespace != "library" {
-		repoPath = fmt.Sprintf("%s/%s", namespace, repo)
-	}
+	repoPath := c.QueryParam("repoPath")
+	tag := c.QueryParam("tag")
 
 	data := a.setUserPermissions(c)
 	if data["deleteAllowed"].Bool() {
 		a.client.DeleteTag(repoPath, tag)
 	}
-
-	return c.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/%s/%s", a.config.BasePath, namespace, repo))
+	basePath := viper.GetString("uri_base_path")
+	return c.Redirect(http.StatusSeeOther, fmt.Sprintf("%s%s", basePath, repoPath))
 }
 
 // viewLog view events from sqlite.
-func (a *apiClient) viewLog(c echo.Context) error {
+func (a *apiClient) viewEventLog(c echo.Context) error {
 	data := a.setUserPermissions(c)
 	data.Set("events", a.eventListener.GetEvents(""))
-
 	return c.Render(http.StatusOK, "event_log.html", data)
 }
 

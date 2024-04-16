@@ -8,8 +8,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/quiq/docker-registry-ui/registry"
+	"github.com/quiq/registry-ui/registry"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	// 🐒 patching of "database/sql".
 	_ "github.com/go-sql-driver/mysql"
@@ -18,6 +19,7 @@ import (
 )
 
 const (
+	userAgent    = "registry-ui"
 	schemaSQLite = `
 	CREATE TABLE events (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,7 +58,16 @@ type EventRow struct {
 }
 
 // NewEventListener initialize EventListener.
-func NewEventListener(databaseDriver, databaseLocation string, retention int, eventDeletion bool) *EventListener {
+func NewEventListener() *EventListener {
+	databaseDriver := viper.GetString("event_listener.database_driver")
+	databaseLocation := viper.GetString("event_listener.database_location")
+	retention := viper.GetInt("event_listener.retention_days")
+	eventDeletion := viper.GetBool("event_listener.deletion_enabled")
+
+	if databaseDriver != "sqlite3" && databaseDriver != "mysql" {
+		panic(fmt.Errorf("event_database_driver should be either sqlite3 or mysql"))
+	}
+
 	return &EventListener{
 		databaseDriver:   databaseDriver,
 		databaseLocation: databaseLocation,
@@ -90,8 +101,8 @@ func (e *EventListener) ProcessEvents(request *http.Request) {
 	}
 	stmt, _ := db.Prepare("INSERT INTO events(action, repository, tag, ip, user, created) values(?,?,?,?,?," + now + ")")
 	for _, i := range gjson.GetBytes(j, "events").Array() {
-		// Ignore calls by docker-registry-ui itself.
-		if i.Get("request.useragent").String() == "docker-registry-ui" {
+		// Ignore calls by registry-ui itself.
+		if strings.HasPrefix(i.Get("request.useragent").String(), userAgent) {
 			continue
 		}
 		action := i.Get("action").String()
@@ -143,7 +154,8 @@ func (e *EventListener) GetEvents(repository string) []EventRow {
 
 	query := "SELECT * FROM events ORDER BY id DESC LIMIT 1000"
 	if repository != "" {
-		query = fmt.Sprintf("SELECT * FROM events WHERE repository='%s' ORDER BY id DESC LIMIT 5", repository)
+		query = fmt.Sprintf("SELECT * FROM events WHERE repository='%s' OR repository LIKE '%s/%%' ORDER BY id DESC LIMIT 5",
+			repository, repository)
 	}
 	rows, err := db.Query(query)
 	if err != nil {

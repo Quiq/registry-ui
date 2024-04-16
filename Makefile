@@ -1,10 +1,17 @@
-IMAGE=quiq/docker-registry-ui
+IMAGE=quiq/registry-ui
 VERSION=`sed -n '/version/ s/.* = //;s/"//g p' version.go`
+NOCACHE=--no-cache
 
-.DEFAULT: buildx
+.DEFAULT_GOAL := dummy
 
-buildx:
-	@docker build -t ${IMAGE}:${VERSION} .
+dummy:
+	@echo "Nothing to do here."
 
-publish:
-	@docker buildx build --platform linux/amd64,linux/arm64 -t ${IMAGE}:${VERSION} -t ${IMAGE}:latest --push .
+build:
+	docker build ${NOCACHE} -t ${IMAGE}:${VERSION} .
+
+public:
+	docker buildx build ${NOCACHE} --platform linux/amd64,linux/arm64 -t ${IMAGE}:${VERSION} -t ${IMAGE}:latest --push .
+
+test:
+	docker buildx build ${NOCACHE} --platform linux/amd64 -t docker.quiq.im/registry-ui:test -t docker.quiq.sh/registry-ui:test --push .

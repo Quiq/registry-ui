@@ -34,9 +34,9 @@ func TestSortedMapKeys(t *testing.T) {
 		"zoo": "bar",
 	}
 	b := map[string]timeSlice{
-		"zoo": []tagData{{name: "1", created: time.Now()}},
-		"abc": []tagData{{name: "1", created: time.Now()}},
-		"foo": []tagData{{name: "1", created: time.Now()}},
+		"zoo": []TagData{{name: "1", created: time.Now()}},
+		"abc": []TagData{{name: "1", created: time.Now()}},
+		"foo": []TagData{{name: "1", created: time.Now()}},
 	}
 	c := map[string][]string{
 		"zoo": {"1", "2"},
