@@ -1,12 +1,18 @@
 ## Changelog
 
+## 0.10.1 (2024-04-19)
+
+* Rename cmd flag `-purge-from-repos` to `-purge-include-repos` to purge tags only for the specified repositories.
+* Add a new cmd flag `-purge-exclude-repos` to skip the specified repositories from the tag purging.
+* Make image column clickable in Event Log.
+
 ### 0.10.0 (2024-04-16)
 
 **JUST BREAKING CHANGES**
 
 * We have made a full rewrite. Over 6 years many things have been changed.
 * Renamed github/dockerhub repo from docker-registry-ui -> registry-ui
-* Switched from doing raw http calls to github.com/google/go-containerregistry
+* Switched from doing raw http calls to `github.com/google/go-containerregistry`
 * URLs and links are now matching the image references, no more "library" or other weird URL parts.
 * No namespace or only 2-level deep concept
 * An arbitrary repository levels are supported
@@ -18,7 +24,7 @@
 * Changed format of config.yml but the same concept is preserved
 * Event listener path has been changed from /api/events to /event-receiver and you may need to update your registry config
 * Removed built-in cron scheduler for purging tags, please use the normal cron :)
-* Now you can now tune the refresh of catalog and separately refresh of tag counting, disable them etc.
+* Now you can tune the refresh of catalog and separately refresh of tag counting, disable them etc.
 * Everything has been made better! :)
 
 ### 0.9.7 (2024-02-21)
