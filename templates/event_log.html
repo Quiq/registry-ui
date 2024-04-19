@@ -72,10 +72,10 @@
         {{range _, e := events}}
             <tr>
                 <td>{{ e.Action }}</td>
-                {{if hasPrefix(e.Tag,"sha256") }}
-                <td title="{{ e.Tag }}">{{ e.Repository }}@{{ e.Tag[:19] }}...</td>
+                {{if hasPrefix(e.Tag,"sha256:") }}
+                <td title="{{ e.Tag }}"><a href="{{ basePath }}/{{ e.Repository }}@{{ e.Tag }}">{{ e.Repository }}@{{ e.Tag[:19] }}...</a></td>
                 {{else}}
-                <td>{{ e.Repository }}:{{ e.Tag }}</td>
+                <td><a href="{{ basePath }}/{{ e.Repository }}:{{ e.Tag }}">{{ e.Repository }}:{{ e.Tag }}</a></td>
                 {{end}}
                 <td>{{ e.IP }}</td>
                 <td>{{ e.User }}</td>
