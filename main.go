@@ -23,16 +23,17 @@ func main() {
 	var (
 		a apiClient
 
-		configFile, loggingLevel string
-		purgeFromRepos           string
-		purgeTags, purgeDryRun   bool
+		configFile, loggingLevel             string
+		purgeTags, purgeDryRun               bool
+		purgeIncludeRepos, purgeExcludeRepos string
 	)
 	flag.StringVar(&configFile, "config-file", "config.yml", "path to the config file")
 	flag.StringVar(&loggingLevel, "log-level", "info", "logging level")
 
 	flag.BoolVar(&purgeTags, "purge-tags", false, "purge old tags instead of running a web server")
 	flag.BoolVar(&purgeDryRun, "dry-run", false, "dry-run for purging task, does not delete anything")
-	flag.StringVar(&purgeFromRepos, "purge-from-repos", "", "comma-separated list of repos to purge instead of all")
+	flag.StringVar(&purgeIncludeRepos, "purge-include-repos", "", "comma-separated list of repos to purge tags from, otherwise all")
+	flag.StringVar(&purgeExcludeRepos, "purge-exclude-repos", "", "comma-separated list of repos to skip from purging tags, otherwise none")
 	flag.Parse()
 
 	// Setup logging
@@ -56,7 +57,7 @@ func main() {
 
 	// Execute CLI task and exit.
 	if purgeTags {
-		registry.PurgeOldTags(a.client, purgeDryRun, purgeFromRepos)
+		registry.PurgeOldTags(a.client, purgeDryRun, purgeIncludeRepos, purgeExcludeRepos)
 		return
 	}
 

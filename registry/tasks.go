@@ -42,11 +42,20 @@ func (p timeSlice) Swap(i, j int) {
 }
 
 // PurgeOldTags purge old tags.
-func PurgeOldTags(client *Client, purgeDryRun bool, purgeFromRepos string) {
+func PurgeOldTags(client *Client, purgeDryRun bool, purgeIncludeRepos, purgeExcludeRepos string) {
 	logger := SetupLogging("registry.tasks.PurgeOldTags")
+	keepDays := viper.GetInt("purge_tags.keep_days")
+	keepCount := viper.GetInt("purge_tags.keep_count")
+	keepRegexp := viper.GetString("purge_tags.keep_regexp")
+	keepFromFile := viper.GetString("purge_tags.keep_from_file")
+
+	dryRunText := ""
+	if purgeDryRun {
+		logger.Warn("Dry-run mode enabled.")
+		dryRunText = "skipped"
+	}
 
 	var dataFromFile gjson.Result
-	keepFromFile := viper.GetString("purge_tags.keep_from_file")
 	if keepFromFile != "" {
 		if _, err := os.Stat(keepFromFile); os.IsNotExist(err) {
 			logger.Warnf("Cannot open %s: %s", keepFromFile, err)
@@ -62,21 +71,25 @@ func PurgeOldTags(client *Client, purgeDryRun bool, purgeFromRepos string) {
 		dataFromFile = gjson.ParseBytes(data)
 	}
 
-	dryRunText := ""
-	if purgeDryRun {
-		logger.Warn("Dry-run mode enabled.")
-		dryRunText = "skipped"
-	}
-
 	catalog := []string{}
-	if purgeFromRepos != "" {
-		logger.Infof("Working on repositories [%s] to scan their tags and creation dates...", purgeFromRepos)
-		catalog = append(catalog, strings.Split(purgeFromRepos, ",")...)
+	if purgeIncludeRepos != "" {
+		logger.Infof("Including repositories: %s", purgeIncludeRepos)
+		catalog = append(catalog, strings.Split(purgeIncludeRepos, ",")...)
 	} else {
-		logger.Info("Scanning registry for repositories, tags and their creation dates...")
 		client.RefreshCatalog()
 		catalog = client.GetRepos()
 	}
+	if purgeExcludeRepos != "" {
+		logger.Infof("Excluding repositories: %s", purgeExcludeRepos)
+		tmpCatalog := []string{}
+		for _, repo := range catalog {
+			if !ItemInSlice(repo, strings.Split(purgeExcludeRepos, ",")) {
+				tmpCatalog = append(tmpCatalog, repo)
+			}
+		}
+		catalog = tmpCatalog
+	}
+	logger.Infof("Working on repositories: %s", catalog)
 
 	now := time.Now().UTC()
 	repos := map[string]timeSlice{}
@@ -91,7 +104,7 @@ func PurgeOldTags(client *Client, purgeDryRun bool, purgeFromRepos string) {
 			imageRef := repo + ":" + tag
 			created := client.GetImageCreated(imageRef)
 			if created.IsZero() {
-				// Image manifest with zero creation time, e.g. cosign one
+				// Image manifest with zero creation time, e.g. cosign w/o --record-creation-timestamp
 				logger.Debugf("[%s] tag with zero creation time: %s", repo, tag)
 				continue
 			}
@@ -100,16 +113,12 @@ func PurgeOldTags(client *Client, purgeDryRun bool, purgeFromRepos string) {
 	}
 
 	logger.Infof("Scanned %d repositories.", len(catalog))
-
-	keepDays := viper.GetInt("purge_tags.keep_days")
-	keepCount := viper.GetInt("purge_tags.keep_count")
 	logger.Infof("Filtering out tags for purging: keep %d days, keep count %d", keepDays, keepCount)
-	keepRegexp := viper.GetString("purge_tags.keep_regexp")
 	if keepRegexp != "" {
 		logger.Infof("Keeping tags matching regexp: %s", keepRegexp)
 	}
 	if keepFromFile != "" {
-		logger.Infof("Keeping tags for repos from the file: %+v", dataFromFile)
+		logger.Infof("Keeping tags from file: %+v", dataFromFile)
 	}
 	purgeTags := map[string][]string{}
 	keepTags := map[string][]string{}
