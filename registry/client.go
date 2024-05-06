@@ -272,8 +272,8 @@ func (c *Client) GetImageCreated(imageRef string) time.Time {
 	return cfg.Created.Time
 }
 
-// TagCounts return map with tag counts according to the provided list of repos/sub-repos etc.
-func (c *Client) TagCounts(repoPath string, repos []string) map[string]int {
+// SubRepoTagCounts return map with tag counts according to the provided list of repos/sub-repos etc.
+func (c *Client) SubRepoTagCounts(repoPath string, repos []string) map[string]int {
 	counts := map[string]int{}
 	for _, r := range repos {
 		subRepo := r
@@ -281,7 +281,7 @@ func (c *Client) TagCounts(repoPath string, repos []string) map[string]int {
 			subRepo = repoPath + "/" + r
 		}
 		for k, v := range c.tagCounts {
-			if strings.HasPrefix(k, subRepo) {
+			if k == subRepo || strings.HasPrefix(k, subRepo+"/") {
 				counts[subRepo] = counts[subRepo] + v
 			}
 		}

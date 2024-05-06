@@ -1,5 +1,9 @@
 ## Changelog
 
+## UNRELEASED
+
+* Fix repo tag count when a repo name is a prefix for another repo name(s)
+
 ## 0.10.1 (2024-04-19)
 
 * Rename cmd flag `-purge-from-repos` to `-purge-include-repos` to purge tags only for the specified repositories.
