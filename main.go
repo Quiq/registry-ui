@@ -51,6 +51,8 @@ func main() {
 	if err != nil {
 		panic(fmt.Errorf("fatal error reading config file: %w", err))
 	}
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	viper.AutomaticEnv()
 
 	// Init registry API client.
 	a.client = registry.NewClient()

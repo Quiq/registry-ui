@@ -27,6 +27,9 @@ Docker images [quiq/registry-ui](https://hub.docker.com/r/quiq/registry-ui/tags/
 
 The configuration is stored in `config.yml` and the options are self-descriptive.
 
+You can override any config option via environment variables using SECTION_KEY_NAME syntax,
+e.g. `LISTEN_ADDR`, `PERFORMANCE_TAGS_COUNT_REFRESH_INTERVAL`, `REGISTRY_HOSTNAME` etc.
+
 ### Run UI
 
     docker run -d -p 8000:8000 -v /local/config.yml:/opt/config.yml:ro quiq/registry-ui
