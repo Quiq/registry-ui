@@ -1,6 +1,6 @@
 ## Changelog
 
-## UNRELEASED
+## 0.10.2 (2024-05-31)
 
 * Fix repo tag count when a repo name is a prefix for another repo name(s)
 * Allow to override any config option via environment variables using SECTION_KEY_NAME syntax, e.g.
