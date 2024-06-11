@@ -280,11 +280,15 @@ func (c *Client) SubRepoTagCounts(repoPath string, repos []string) map[string]in
 		if repoPath != "" {
 			subRepo = repoPath + "/" + r
 		}
+
+		// Acquire lock to prevent concurrent map iteration and map write.
+		c.tagCountsMux.Lock()
 		for k, v := range c.tagCounts {
 			if k == subRepo || strings.HasPrefix(k, subRepo+"/") {
 				counts[subRepo] = counts[subRepo] + v
 			}
 		}
+		c.tagCountsMux.Unlock()
 	}
 	return counts
 }
