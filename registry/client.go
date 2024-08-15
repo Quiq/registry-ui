@@ -27,6 +27,7 @@ type Client struct {
 	tagCountsMux   sync.Mutex
 	tagCounts      map[string]int
 	isCatalogReady bool
+	nameOptions    []name.Option
 }
 
 type ImageInfo struct {
@@ -74,12 +75,19 @@ func NewClient() *Client {
 	puller, _ := remote.NewPuller(authOpt, remote.WithUserAgent(userAgent), remote.WithPageSize(pageSize))
 	pusher, _ := remote.NewPusher(authOpt, remote.WithUserAgent(userAgent))
 
+	insecure := viper.GetBool("registry.insecure")
+	nameOptions := []name.Option{}
+	if insecure {
+		nameOptions = append(nameOptions, name.Insecure)
+	}
+
 	c := &Client{
-		puller:    puller,
-		pusher:    pusher,
-		logger:    SetupLogging("registry.client"),
-		repos:     []string{},
-		tagCounts: map[string]int{},
+		puller:      puller,
+		pusher:      pusher,
+		logger:      SetupLogging("registry.client"),
+		repos:       []string{},
+		tagCounts:   map[string]int{},
+		nameOptions: nameOptions,
 	}
 	return c
 }
@@ -108,7 +116,7 @@ func (c *Client) RefreshCatalog() {
 	ctx := context.Background()
 	start := time.Now()
 	c.logger.Info("[RefreshCatalog] Started reading catalog...")
-	registry, _ := name.NewRegistry(viper.GetString("registry.hostname"))
+	registry, _ := name.NewRegistry(viper.GetString("registry.hostname"), c.nameOptions...)
 	cat, err := c.puller.Catalogger(ctx, registry)
 	if err != nil {
 		c.logger.Errorf("[RefreshCatalog] Error fetching catalog: %s", err)
@@ -156,7 +164,7 @@ func (c *Client) GetRepos() []string {
 // ListTags get tags for the repo
 func (c *Client) ListTags(repoName string) []string {
 	ctx := context.Background()
-	repo, _ := name.NewRepository(viper.GetString("registry.hostname") + "/" + repoName)
+	repo, _ := name.NewRepository(viper.GetString("registry.hostname")+"/"+repoName, c.nameOptions...)
 	tags, err := c.puller.List(ctx, repo)
 	if err != nil {
 		c.logger.Errorf("Error listing tags for repo %s: %s", repoName, err)
@@ -170,7 +178,7 @@ func (c *Client) ListTags(repoName string) []string {
 // GetImageInfo get image info by the reference - tag name or digest sha256.
 func (c *Client) GetImageInfo(imageRef string) (ImageInfo, error) {
 	ctx := context.Background()
-	ref, err := name.ParseReference(viper.GetString("registry.hostname") + "/" + imageRef)
+	ref, err := name.ParseReference(viper.GetString("registry.hostname")+"/"+imageRef, c.nameOptions...)
 	if err != nil {
 		c.logger.Errorf("Error parsing image reference %s: %s", imageRef, err)
 		return ImageInfo{}, err
@@ -252,7 +260,7 @@ func structToMap(obj interface{}) map[string]interface{} {
 func (c *Client) GetImageCreated(imageRef string) time.Time {
 	zeroTime := new(time.Time)
 	ctx := context.Background()
-	ref, err := name.ParseReference(viper.GetString("registry.hostname") + "/" + imageRef)
+	ref, err := name.ParseReference(viper.GetString("registry.hostname")+"/"+imageRef, c.nameOptions...)
 	if err != nil {
 		c.logger.Errorf("Error parsing image reference %s: %s", imageRef, err)
 		return *zeroTime
@@ -310,7 +318,7 @@ func (c *Client) CountTags(interval int) {
 func (c *Client) DeleteTag(repoPath, tag string) {
 	ctx := context.Background()
 	imageRef := repoPath + ":" + tag
-	ref, err := name.ParseReference(viper.GetString("registry.hostname") + "/" + imageRef)
+	ref, err := name.ParseReference(viper.GetString("registry.hostname")+"/"+imageRef, c.nameOptions...)
 	if err != nil {
 		c.logger.Errorf("Error parsing image reference %s: %s", imageRef, err)
 		return
@@ -323,7 +331,7 @@ func (c *Client) DeleteTag(repoPath, tag string) {
 	}
 	// Parse image reference by digest now
 	imageRefDigest := ref.Context().RepositoryStr() + "@" + descr.Digest.String()
-	ref, err = name.ParseReference(viper.GetString("registry.hostname") + "/" + imageRefDigest)
+	ref, err = name.ParseReference(viper.GetString("registry.hostname")+"/"+imageRefDigest, c.nameOptions...)
 	if err != nil {
 		c.logger.Errorf("Error parsing image reference %s: %s", imageRefDigest, err)
 		return
