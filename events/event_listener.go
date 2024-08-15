@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -26,7 +27,7 @@ const (
 		action CHAR(5) NULL,
 		repository VARCHAR(100) NULL,
 		tag VARCHAR(100) NULL,
-		ip VARCHAR(15) NULL,
+		ip VARCHAR(45) NULL,
 		user VARCHAR(50) NULL,
 		created DATETIME NULL
 	);
@@ -112,7 +113,10 @@ func (e *EventListener) ProcessEvents(request *http.Request) {
 		if tag == "" {
 			tag = i.Get("target.digest").String()
 		}
-		ip := strings.Split(i.Get("request.addr").String(), ":")[0]
+		ip := i.Get("request.addr").String()
+		if x, _, _ := net.SplitHostPort(ip); x != "" {
+			ip = x
+		}
 		user := i.Get("actor.name").String()
 		e.logger.Debugf("Parsed event data: %s %s:%s %s %s ", action, repository, tag, ip, user)
 
