@@ -21,6 +21,7 @@ performance:
 registry:
   # Registry hostname (without protocol but may include port).
   hostname: docker-registry.local
+  insecure: false
 
   # Registry credentials.
   # They need to have a full access to the registry.
