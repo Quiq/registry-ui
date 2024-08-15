@@ -1,5 +1,15 @@
 ## Changelog
 
+## 0.10.3 (2024-08-15)
+
+* Add `registry.insecure` option to the config (alternatively REGISTRY_INSECURE env var) to support non-https registries.
+  Thanks to @KanagawaNezumi
+* Fix concurrent map iteration and write in rare cases.
+* Upgrade go version to 1.22.6 and all dependencies, alpine to 3.20.
+* IPv6 addresses were not displayed correctly.
+  In case you need to store registry events with IPv6 addresses in MySQL, you need to run `ALTER TABLE events MODIFY column ip varchar(45) NULL`.
+  For sqlite, you can start a new db file or migrate events manually as it doesn't support ALTER.
+
 ## 0.10.2 (2024-05-31)
 
 * Fix repo tag count when a repo name is a prefix for another repo name(s)

@@ -21,6 +21,7 @@ performance:
 registry:
   # Registry hostname (without protocol but may include port).
   hostname: docker-registry.local
+  # Allow to access non-https enabled registry.
   insecure: false
 
   # Registry credentials.
