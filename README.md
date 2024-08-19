@@ -82,7 +82,7 @@ You can create a table manually if you don't want to grant `CREATE` permission:
 		action CHAR(4) NULL,
 		repository VARCHAR(100) NULL,
 		tag VARCHAR(100) NULL,
-		ip VARCHAR(15) NULL,
+		ip VARCHAR(45) NULL,
 		user VARCHAR(50) NULL,
 		created DATETIME NULL
 	);
