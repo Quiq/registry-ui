@@ -13,5 +13,8 @@ build:
 public:
 	docker buildx build ${NOCACHE} --platform linux/amd64,linux/arm64 -t ${IMAGE}:${VERSION} -t ${IMAGE}:latest --push .
 
+debug:
+	docker buildx build ${NOCACHE} --platform linux/amd64,linux/arm64 -t ${IMAGE}:debug --push .
+
 test:
 	docker buildx build ${NOCACHE} --platform linux/amd64 -t docker.quiq.im/registry-ui:test -t docker.quiq.sh/registry-ui:test --push .

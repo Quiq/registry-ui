@@ -205,7 +205,11 @@ func (c *Client) GetImageInfo(imageRef string) (ImageInfo, error) {
 	}
 
 	if ii.IsImage {
-		img, _ := descr.Image()
+		img, err := descr.Image()
+		if err != nil {
+			c.logger.Errorf("Cannot convert descriptor to Image for image reference %s: %s", imageRef, err)
+			return ImageInfo{}, err
+		}
 		cfg, err := img.ConfigFile()
 		if err != nil {
 			c.logger.Errorf("Cannot fetch ConfigFile for image reference %s: %s", imageRef, err)
@@ -228,7 +232,11 @@ func (c *Client) GetImageInfo(imageRef string) (ImageInfo, error) {
 		// In case of Image Index, if we request for Image() > ConfigFile(), it will be resolved
 		// to a config of one of the manifests (one of the platforms).
 		// It doesn't make a lot of sense, even they are usually identical. Also extra API calls which slows things down.
-		imgIdx, _ := descr.ImageIndex()
+		imgIdx, err := descr.ImageIndex()
+		if err != nil {
+			c.logger.Errorf("Cannot convert descriptor to ImageIndex for image reference %s: %s", imageRef, err)
+			return ImageInfo{}, err
+		}
 		IdxMf, _ := imgIdx.IndexManifest()
 		platforms := []string{}
 		for _, m := range IdxMf.Manifests {
@@ -271,7 +279,11 @@ func (c *Client) GetImageCreated(imageRef string) time.Time {
 		return *zeroTime
 	}
 	// In case of ImageIndex, it is resolved to a random sub-image which should be fine.
-	img, _ := descr.Image()
+	img, err := descr.Image()
+	if err != nil {
+		c.logger.Errorf("Cannot convert descriptor to Image for image reference %s: %s", imageRef, err)
+		return *zeroTime
+	}
 	cfg, err := img.ConfigFile()
 	if err != nil {
 		c.logger.Errorf("Cannot fetch ConfigFile for image reference %s: %s", imageRef, err)
