@@ -21,6 +21,7 @@ RUN apk add --no-cache ca-certificates tzdata && \
 
 ADD templates /opt/templates
 ADD static /opt/static
+ADD config.yml /opt
 COPY --from=builder /opt/registry-ui /opt/
 
 USER nobody
