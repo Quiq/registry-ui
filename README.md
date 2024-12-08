@@ -23,6 +23,23 @@ Assuming you will put it behind nginx, oauth2_proxy or similar.
 
 Docker images [quiq/registry-ui](https://hub.docker.com/r/quiq/registry-ui/tags/)
 
+### Quick start
+
+Run a Docker registry in your host (if you don't already had one):
+
+    docker run -d --network host \
+        --name registry registry:2
+
+Run registry UI directly connected to it:
+
+    docker run -d --network host \
+        -e REGISTRY_HOSTNAME=127.0.0.1:5000 \
+        -e REGISTRY_INSECURE=true \
+        --name registry-ui quiq/registry-ui
+
+Push any Docker image to 127.0.0.1:5000/owner/name and go into http://127.0.0.1:8000 with
+your web browser.
+
 ### Configuration
 
 The configuration is stored in `config.yml` and the options are self-descriptive.
@@ -30,7 +47,7 @@ The configuration is stored in `config.yml` and the options are self-descriptive
 You can override any config option via environment variables using SECTION_KEY_NAME syntax,
 e.g. `LISTEN_ADDR`, `PERFORMANCE_TAGS_COUNT_REFRESH_INTERVAL`, `REGISTRY_HOSTNAME` etc.
 
-### Run UI
+Passing the full config file through:
 
     docker run -d -p 8000:8000 -v /local/config.yml:/opt/config.yml:ro quiq/registry-ui
 
