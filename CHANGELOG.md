@@ -1,5 +1,10 @@
 ## Changelog
 
+## 0.10.4 (2025-06-11)
+
+* Include the default config file into the Docker image.
+* Upgrade go version to 1.24.4 and all dependencies, alpine to 3.21.
+
 ## 0.10.3 (2024-08-15)
 
 * Add `registry.insecure` option to the config (alternatively REGISTRY_INSECURE env var) to support non-https registries.

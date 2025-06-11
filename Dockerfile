@@ -1,4 +1,4 @@
-FROM golang:1.22.6-alpine3.20 as builder
+FROM golang:1.24.4-alpine3.21 as builder
 
 RUN apk update && \
     apk add ca-certificates git bash gcc musl-dev
@@ -12,7 +12,7 @@ RUN go test -v ./registry && \
     go build -o /opt/registry-ui *.go
 
 
-FROM alpine:3.20
+FROM alpine:3.21
 
 WORKDIR /opt
 RUN apk add --no-cache ca-certificates tzdata && \

@@ -17,4 +17,4 @@ debug:
 	docker buildx build ${NOCACHE} --platform linux/amd64,linux/arm64 -t ${IMAGE}:debug --push .
 
 test:
-	docker buildx build ${NOCACHE} --platform linux/amd64 -t docker.quiq.im/registry-ui:test -t docker.quiq.sh/registry-ui:test --push .
+	docker buildx build ${NOCACHE} --platform linux/arm64 -t docker.quiq.im/registry-ui:test -t docker.quiq.sh/registry-ui:test --push .
