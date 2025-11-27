@@ -1,0 +1,253 @@
+/* Custom CSS for Registry UI */
+
+/* Navbar with geometric pattern background */
+.navbar.bg-dark {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.navbar.bg-dark::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+        linear-gradient(45deg, rgba(255, 255, 255, 0.08) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(255, 255, 255, 0.08) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.08) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.08) 75%);
+    background-size: 30px 30px;
+    background-position: 0 0, 0 15px, 15px -15px, -15px 0px;
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+.navbar.bg-dark .container {
+    position: relative;
+    z-index: 1;
+}
+
+/* Footer styling for both themes */
+footer.bg-light {
+    background-color: #f8f9fa !important;
+    border-top-color: #dee2e6 !important;
+}
+
+footer.bg-light a {
+    color: #000000 !important;
+    transition: color 0.2s ease;
+}
+
+footer.bg-light a:hover {
+    color: #6c757d !important;
+}
+
+[data-bs-theme="dark"] footer.bg-light {
+    background-color: #212529 !important;
+    border-top-color: #495057 !important;
+}
+
+[data-bs-theme="dark"] footer.bg-light a {
+    color: #adb5bd !important;
+    transition: color 0.2s ease;
+}
+
+[data-bs-theme="dark"] footer.bg-light a:hover {
+    color: #dee2e6 !important;
+}
+
+/* Breadcrumb styling for both themes */
+.breadcrumb {
+    background: linear-gradient(135deg, #e0e7ff 0%, #cffafe 100%);
+    border: 1px solid #d1d5db;
+    padding: 0.375rem 0.75rem;
+    min-height: 38px;
+}
+
+[data-bs-theme="dark"] .breadcrumb {
+    background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+    border: 1px solid #4b5563;
+}
+
+/* Table header styling for both themes */
+.table-light {
+    --bs-table-bg: var(--bs-secondary-bg);
+    --bs-table-color: var(--bs-body-color);
+    --bs-table-border-color: var(--bs-border-color);
+}
+
+.table-light th {
+    background-color: var(--bs-secondary-bg) !important;
+    color: #6c757d !important;
+    font-weight: 500 !important;
+}
+
+[data-bs-theme="dark"] .table-light th {
+    color: #adb5bd !important;
+}
+
+/* DataTables 2.x - controls at bottom styling with Bootstrap row classes from dom config */
+.table-responsive > div.dt-container > div.row:last-child {
+    margin-top: 1rem;
+    padding-bottom: 0.75rem;
+}
+
+/* Prevent horizontal scrollbar in table-responsive */
+.table-responsive {
+    overflow-x: visible !important;
+}
+
+.table-responsive > div.dt-container {
+    overflow: visible !important;
+}
+
+.table-responsive table {
+    margin-bottom: 0;
+}
+
+/* Target the column divs directly for padding */
+.table-responsive > div.dt-container > div.row:last-child > div.col-sm-4:first-child,
+.table-responsive > div.dt-container > div.row:last-child > [class*="col-"]:first-child {
+    padding-left: 0.75rem !important;
+}
+
+.table-responsive > div.dt-container > div.row:last-child > div.col-sm-4:last-child,
+.table-responsive > div.dt-container > div.row:last-child > [class*="col-"]:last-child {
+    padding-right: 0.75rem !important;
+}
+
+/* Also target new layout system if used */
+.table-responsive > div.dt-container > div.dt-layout-row:last-child {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    margin-top: 1rem;
+}
+
+/* Add spacing to individual control elements */
+.dt-container .dt-info {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    padding-left: 0.75rem !important;
+    color: #868e96 !important;
+}
+
+.dt-container .dt-paging {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.dt-container .dt-length {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    padding-right: 0.75rem !important;
+    color: #868e96 !important;
+}
+
+[data-bs-theme="dark"] .dt-container .dt-info,
+[data-bs-theme="dark"] .dt-container .dt-length {
+    color: #adb5bd !important;
+}
+
+/* Add spacing between length label and select dropdown */
+.dt-container .dt-length select {
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+}
+
+/* DataTables 2.x pagination styling - restore Bootstrap 5 look */
+div.dt-container .dt-paging .dt-paging-button {
+    padding: 0.375rem 0.75rem !important;
+    border: 1px solid #adb5bd !important;
+    border-radius: 0.375rem !important;
+    margin: 0 0.125rem !important;
+    min-width: auto !important;
+    background: white !important;
+    color: #212529 !important;
+}
+
+[data-bs-theme="dark"] div.dt-container .dt-paging .dt-paging-button {
+    background: var(--bs-dark) !important;
+    border-color: #6c757d !important;
+    color: var(--bs-body-color) !important;
+}
+
+div.dt-container .dt-paging .dt-paging-button.current,
+div.dt-container .dt-paging .dt-paging-button.current:hover {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: white !important;
+}
+
+div.dt-container .dt-paging .dt-paging-button.disabled,
+div.dt-container .dt-paging .dt-paging-button.disabled:hover {
+    opacity: 0.5 !important;
+    background: white !important;
+    color: #6c757d !important;
+    cursor: not-allowed !important;
+}
+
+[data-bs-theme="dark"] div.dt-container .dt-paging .dt-paging-button.disabled,
+[data-bs-theme="dark"] div.dt-container .dt-paging .dt-paging-button.disabled:hover {
+    background: var(--bs-dark) !important;
+}
+
+div.dt-container .dt-paging .dt-paging-button:hover:not(.disabled):not(.current) {
+    background-color: #e9ecef !important;
+    border-color: #dee2e6 !important;
+    color: #212529 !important;
+}
+
+[data-bs-theme="dark"] div.dt-container .dt-paging .dt-paging-button:hover:not(.disabled):not(.current) {
+    background-color: #495057 !important;
+    border-color: var(--bs-border-color) !important;
+    color: var(--bs-body-color) !important;
+}
+
+/* Dark mode specific adjustments */
+[data-bs-theme="dark"] .text-muted {
+    color: var(--bs-secondary-color) !important;
+}
+
+[data-bs-theme="dark"] .card {
+    border-color: var(--bs-border-color);
+}
+
+[data-bs-theme="dark"] .shadow-sm {
+    box-shadow: 0 .125rem .25rem rgba(255, 255, 255, .075) !important;
+}
+
+/* Event log table - prevent Time column from wrapping */
+#datatable td:last-child {
+    white-space: nowrap;
+}
+
+/* Image details page - nested table styling */
+/* All first columns (keys) should be grey, regardless of nesting */
+.table-striped.table-bordered td:first-child {
+    color: #838383 !important;
+}
+
+[data-bs-theme="dark"] .table-striped.table-bordered td:first-child {
+    color: #adb5bd !important;
+}
+
+/* Exception: Single-column tables (arrays) - first column is a value, not a key */
+.table-striped.table-bordered td:first-child:last-child {
+    color: #212529 !important;
+}
+
+[data-bs-theme="dark"] .table-striped.table-bordered td:first-child:last-child {
+    color: #dee2e6 !important;
+}
+
+/* All other cells (second column values) should use theme color */
+.table-striped.table-bordered td:not(:first-child) {
+    color: #212529 !important;
+}
+
+[data-bs-theme="dark"] .table-striped.table-bordered td:not(:first-child) {
+    color: #dee2e6 !important;
+}
