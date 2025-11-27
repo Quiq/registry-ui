@@ -6,7 +6,6 @@
 <style>
     /* col 0 style */
     td:nth-child(1) {
-        color: #838383;
         text-align: right;
     }
     /* td: long line wrap */
@@ -17,74 +16,96 @@
 {{end}}
 
 {{block body()}}
-<ol class="breadcrumb">
-    {{ yield breadcrumb() ii.ImageRefRepo }}
-    <li><a href="{{ basePath }}/{{ repoPath }}">{{ ii.ImageRefTag }}</a></li>
-</ol>
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb rounded shadow-sm">
+        {{ yield breadcrumb() ii.ImageRefRepo }}
+        <li class="breadcrumb-item"><a href="{{ basePath }}/{{ repoPath }}" class="text-decoration-none">{{ ii.ImageRefTag }}</a></li>
+    </ol>
+</nav>
 
+<div class="mb-4">
+    <h3 class="d-flex align-items-center">
+        {{if ii.IsImage}}<i class="bi-file-earmark text-primary me-3" style="font-size: 2.5rem;"></i><span>Image Details</span>{{end}}
+        {{if ii.IsImageIndex}}<i class="bi-files text-primary me-3" style="font-size: 2.5rem;"></i><span>Image Index Details</span>{{end}}
+    </h3>
+</div>
 
-<h4>
-    {{if ii.IsImage}}<i class="bi-file-earmark" style="font-size: 2rem;"></i> Image{{end}}
-    {{if ii.IsImageIndex}}<i class="bi-files" style="font-size: 2rem;"></i> Image Index{{end}}
-</h4>
-<table class="table table-striped table-bordered">
-    <thead bgcolor="#ddd">
-        <tr>
-            <th colspan="2">Summary</th>
-        </tr>
-    </thead>
-    <tr>
-        <td width="20%"><b>Image Reference</b></td><td>{{ registryHost }}/{{ repoPath }}</td>
-    </tr>
-    <tr>
-        <td><b>Digest</b></td><td><a href="{{ basePath }}/{{ ii.ImageRefRepo }}@{{ ii.ImageRefDigest }}">{{ ii.ImageRefDigest }}</a></td>
-    </tr>
-    <tr>
-        <td><b>Media Type</b></td><td>{{ ii.MediaType }}</td>
-    </tr>
-    {{if ii.IsImageIndex}}
-    <tr>
-        <td><b>Sub-Images</b></td><td>{{ len(ii.Manifest["manifests"]) }} </td>
-    </tr>
-    <tr>
-        <td><b>Platforms</b></td><td>{{ ii.Platforms }}</td>
-    </tr>
-    {{end}}
-    {{if ii.IsImage}}
-    <tr>
-        <td><b>Image ID</b></td><td>{{ ii.ConfigImageID }}</td>
-    </tr>
-    <tr>
-        <td><b>Image Size</b></td><td>{{ ii.ImageSize|pretty_size }}</td>
-    </tr>
-    <tr>
-        <td><b>Platform</b></td><td>{{ ii.Platforms }}</td>
-    </tr>
-    <tr>
-        <td><b>Created On</b></td><td>{{ ii.Created|pretty_time }}</td>
-    </tr>
-    {{end}}
-</table>
+<div class="card shadow-sm mb-4">
+    <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Summary</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-striped mb-0">
+                <tbody>
+                    <tr>
+                        <td width="20%" class="fw-bold text-muted">Image Reference</td>
+                        <td><code>{{ registryHost }}/{{ repoPath }}</code></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted">Digest</td>
+                        <td>
+                            <a href="{{ basePath }}/{{ ii.ImageRefRepo }}@{{ ii.ImageRefDigest }}" class="text-decoration-none">
+                                <code class="small">{{ ii.ImageRefDigest }}</code>
+                            </a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted">Media Type</td>
+                        <td><span class="badge bg-secondary">{{ ii.MediaType }}</span></td>
+                    </tr>
+                    {{if ii.IsImageIndex}}
+                    <tr>
+                        <td class="fw-bold text-muted">Sub-Images</td>
+                        <td><span class="badge bg-info">{{ len(ii.Manifest["manifests"]) }}</span></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted">Platforms</td>
+                        <td><code class="small">{{ ii.Platforms }}</code></td>
+                    </tr>
+                    {{end}}
+                    {{if ii.IsImage}}
+                    <tr>
+                        <td class="fw-bold text-muted">Image ID</td>
+                        <td><code class="small">{{ ii.ConfigImageID }}</code></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted">Image Size</td>
+                        <td><span class="badge bg-success">{{ ii.ImageSize|pretty_size }}</span></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted">Platform</td>
+                        <td><code class="small">{{ ii.Platforms }}</code></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-muted">Created On</td>
+                        <td><span class="text-muted">{{ ii.Created|pretty_time }}</span></td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
-<table class="table" style="margin-bottom: 0">
-    <thead bgcolor="#ddd">
-        <tr>
-            <th>{{if ii.IsImage}}Manifest{{else}}Index Manifest{{end}}</th>
-        </tr>
-    </thead>
-</table>
-{{ yield json_to_table() ii.Manifest }}
+<div class="card shadow-sm mb-4">
+    <div class="card-header" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+        <h5 class="mb-0" style="color: #333;"><i class="bi bi-file-code me-2"></i>{{if ii.IsImage}}Manifest{{else}}Index Manifest{{end}}</h5>
+    </div>
+    <div class="card-body p-0">
+        {{ yield json_to_table() ii.Manifest }}
+    </div>
+</div>
 
 {{if ii.IsImage}}
-<br>
-<table class="table" style="margin-bottom: 0">
-    <thead bgcolor="#ddd">
-        <tr>
-            <th>Config File</th>
-        </tr>
-    </thead>
-</table>
-{{ yield json_to_table() ii.ConfigFile }}
+<div class="card shadow-sm mb-4">
+    <div class="card-header" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+        <h5 class="mb-0" style="color: #333;"><i class="bi bi-gear me-2"></i>Config File</h5>
+    </div>
+    <div class="card-body p-0">
+        {{ yield json_to_table() ii.ConfigFile }}
+    </div>
+</div>
 {{end}}
 
 {{end}}

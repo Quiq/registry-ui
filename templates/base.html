@@ -1,34 +1,92 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="light">
     <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Registry UI</title>
+        <link rel="stylesheet" type="text/css" href="{{ basePath }}/static/css/bootstrap.min.css">
         <link rel="stylesheet" type="text/css" href="{{ basePath }}/static/css/bootstrap-icons.min.css">
         <link rel="stylesheet" type="text/css" href="{{ basePath }}/static/css/datatables.min.css"/>
+        <link rel="stylesheet" type="text/css" href="{{ basePath }}/static/css/custom.css?v={{version}}">
         <script type="text/javascript" src="{{ basePath }}/static/js/datatables.min.js"></script>
         {{yield head()}}
     </head>
-    <body>
-        <div class="container">
-            <div style="float: left">
-                <h2><a href="{{ basePath }}/" style="text-decoration: none"><i class="bi-journals"></i> Registry UI</a></h2>
+    <body class="d-flex flex-column min-vh-100">
+        <!-- Navigation Header -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+            <div class="container">
+                <a class="navbar-brand" href="{{ basePath }}/">
+                    <i class="bi-journals fs-4 me-2"></i>
+                    <span class="fw-bold">Registry UI</span>
+                </a>
+                <ul class="navbar-nav ms-auto">
+                    {{if eventsAllowed}}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ basePath }}/event-log">
+                            <i class="bi-calendar-week me-1"></i> <strong>Event Log</strong>
+                        </a>
+                    </li>
+                    {{end}}
+                    <li class="nav-item">
+                        <button class="btn btn-link nav-link" id="darkModeToggle" aria-label="Toggle dark mode">
+                            <i class="bi-moon-stars-fill" id="darkModeIcon"></i>
+                        </button>
+                    </li>
+                </ul>
             </div>
-            {{if eventsAllowed}}
-            <div style="float: right">
-                <h4><a href="{{ basePath }}/event-log" style="text-decoration: none"><i class="bi-calendar-week"></i> Event Log</a></h4>
-            </div>
-            {{end}}
-            <div style="clear: both"></div>
+        </nav>
 
+        <!-- Main Content -->
+        <main class="container my-4 flex-grow-1">
             {{yield body()}}
+        </main>
 
-            <div style="padding: 10px 0; margin-bottom: 20px">
-                <div style="text-align: center; color:darkgrey">
-                    Registry UI v{{version}} | <a href="https://quiq.com" target="_blank">Quiq Inc.</a> | <a href="https://github.com/Quiq/registry-ui" target="_blank">Github</a>
+        <!-- Footer -->
+        <footer class="bg-light border-top py-3 mt-auto">
+            <div class="container">
+                <div class="text-center text-muted small">
+                    Registry UI v{{version}} |
+                    <a href="https://quiq.com" target="_blank" class="text-decoration-none">Quiq Inc.</a> |
+                    <a href="https://github.com/Quiq/registry-ui" target="_blank" class="text-decoration-none">
+                        <i class="bi-github"></i> GitHub
+                    </a>
                 </div>
             </div>
-        </div>
+        </footer>
+
+        <script type="text/javascript" src="{{ basePath }}/static/js/bootstrap.bundle.min.js"></script>
+        <script type="text/javascript">
+            // Dark Mode Toggle
+            (function() {
+                const html = document.documentElement;
+                const toggle = document.getElementById('darkModeToggle');
+                const icon = document.getElementById('darkModeIcon');
+
+                // Load saved theme preference or default to light
+                const savedTheme = localStorage.getItem('theme') || 'light';
+                html.setAttribute('data-bs-theme', savedTheme);
+                updateIcon(savedTheme);
+
+                // Toggle dark mode
+                toggle.addEventListener('click', function() {
+                    const currentTheme = html.getAttribute('data-bs-theme');
+                    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+                    html.setAttribute('data-bs-theme', newTheme);
+                    localStorage.setItem('theme', newTheme);
+                    updateIcon(newTheme);
+                });
+
+                // Update icon based on theme
+                function updateIcon(theme) {
+                    if (theme === 'dark') {
+                        icon.className = 'bi-sun-fill';
+                    } else {
+                        icon.className = 'bi-moon-stars-fill';
+                    }
+                }
+            })();
+        </script>
     </body>
 </html>

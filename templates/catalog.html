@@ -2,33 +2,70 @@
 {{import "breadcrumb.html"}}
 
 {{block head()}}
-<script type="text/javascript" src="{{ basePath }}/static/js/bootstrap-confirmation.min.js"></script>
+<script type="text/javascript" src="{{ basePath }}/static/js/bs5-confirmation.js"></script>
 <script type="text/javascript" src="{{ basePath }}/static/js/sorting_natural.js"></script>
 <script type="text/javascript">
     $(document).ready(function() {
-        $('#datatable_repos').DataTable({
+        var reposTable = $('#datatable_repos').DataTable({
             "pageLength": 10,
             "stateSave": true,
+            "dom": "<'row'<'col-sm-12'tr>><'row'<'col-sm-4'i><'col-sm-4 text-center'p><'col-sm-4 text-end'l>>",
             "language": {
-                "emptyTable": "Catalog is being initializing..."
+                "emptyTable": "Catalog is being initializing...",
+                "info": "Showing _START_ to _END_ of _TOTAL_",
+                "infoFiltered": " (filtered from _MAX_)",
+                "infoEmpty": "Showing 0 entries"
             }
         });
 
-        $('#datatable_tags').DataTable({
+        var tagsTable = $('#datatable_tags').DataTable({
             "pageLength": 10,
             "order": [[ 0, 'desc' ]],
             "stateSave": true,
+            "dom": "<'row'<'col-sm-12'tr>><'row'<'col-sm-4'i><'col-sm-4 text-center'p><'col-sm-4 text-end'l>>",
             columnDefs: [
               { type: 'natural', targets: 0 }
             ],
             "language": {
-                "emptyTable": "No tags."
+                "emptyTable": "No tags.",
+                "info": "Showing _START_ to _END_ of _TOTAL_",
+                "infoFiltered": " (filtered from _MAX_)",
+                "infoEmpty": "Showing 0 entries"
             }
-        })
+        });
+
+        // Restore search value from DataTables state
+        var savedSearch = reposTable.search();
+        if (!savedSearch) {
+            savedSearch = tagsTable.search();
+        }
+        if (savedSearch) {
+            $('#repos-search').val(savedSearch);
+            $('#clear-repos-search').show();
+        }
+
+        // Single search box that searches both tables
+        $('#repos-search').on('keyup', function() {
+            var searchValue = this.value;
+            reposTable.search(searchValue).draw();
+            tagsTable.search(searchValue).draw();
+            $('#clear-repos-search').toggle(searchValue.length > 0);
+        });
+
+        $('#clear-repos-search').on('click', function() {
+            $('#repos-search').val('');
+            reposTable.search('').draw();
+            tagsTable.search('').draw();
+            $(this).hide();
+        });
+
         function populateConfirmation()  {
-            $('[data-toggle=confirmation]').confirmation({
-                rootSelector: '[data-toggle=confirmation]',
-                container: 'body'
+            $('[data-bs-toggle=confirmation]').confirmationPopover({
+                title: 'Delete this tag?',
+                btnOkText: 'Delete',
+                btnCancelText: 'Cancel',
+                btnOkClass: 'btn-sm btn-danger',
+                btnCancelClass: 'btn-sm btn-secondary'
             });
         }
         populateConfirmation()
@@ -38,84 +75,131 @@
 {{end}}
 
 {{block body()}}
-<ol class="breadcrumb">
-    {{ yield breadcrumb() repoPath }}
-</ol>
+<div class="d-flex gap-3 mb-3">
+    <nav aria-label="breadcrumb" class="flex-grow-1">
+        <ol class="breadcrumb rounded shadow-sm mb-0 h-100 d-flex align-items-center">
+            {{ yield breadcrumb() repoPath }}
+        </ol>
+    </nav>
+    <div class="position-relative" style="width: 300px;">
+        <input type="text" id="repos-search" class="form-control" placeholder="Search...">
+        <button type="button" class="btn btn-link position-absolute top-50 end-0 translate-middle-y" id="clear-repos-search" style="display: none;">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+</div>
 
 {{if len(repos)>0 || !isCatalogReady}}
-<h4>List of Repositories</h4>
-<table id="datatable_repos" class="table table-striped table-bordered dataTables_wrapper">
-    <thead bgcolor="#ddd">
-        <tr>
-            <th>Repository</th>
-            <th width="20%">Tags</th>
-        </tr>
-    </thead>
-    <tbody>
-        {{range _, repo := repos}}
-            {{ full_repo_path := repoPath != "" ? repoPath+"/"+repo : repo }}
-            {{if !isset(tagCounts[full_repo_path]) || (isset(tagCounts[full_repo_path]) && tagCounts[full_repo_path] > 0)}}
-            <tr>
-                <td><i class="bi bi-folder2" style="margin-right: 10px"></i> <a href="{{ basePath }}/{{ full_repo_path }}">{{ repo }}</a></td>
-                <td>{{ tagCounts[full_repo_path] }}</td>
-            </tr>
-            {{end}}
-        {{end}}
-    </tbody>
-</table>
+<div class="card shadow-sm mb-4">
+    <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        <h5 class="mb-0"><i class="bi bi-folder2 me-2"></i>Repositories</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table id="datatable_repos" class="table table-hover table-striped mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Repository</th>
+                        <th width="20%">Tags</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range _, repo := repos}}
+                        {{ full_repo_path := repoPath != "" ? repoPath+"/"+repo : repo }}
+                        {{if !isset(tagCounts[full_repo_path]) || (isset(tagCounts[full_repo_path]) && tagCounts[full_repo_path] > 0)}}
+                        <tr>
+                            <td>
+                                <i class="bi bi-folder2 text-primary me-2"></i>
+                                <a href="{{ basePath }}/{{ full_repo_path }}" class="text-decoration-none fw-semibold">{{ repo }}</a>
+                            </td>
+                            <td><span class="badge bg-secondary">{{ tagCounts[full_repo_path] }}</span></td>
+                        </tr>
+                        {{end}}
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 {{end}} {* end repos *}
 
 {{if len(tags)>0}}
-<h4>List of Tags</h4>
-<table id="datatable_tags" class="table table-striped table-bordered">
-    <thead bgcolor="#ddd">
-        <tr>
-            <th>Tag Name</th>
-        </tr>
-    </thead>
-    <tbody>
-        {{range _, tag := tags}}
-        <tr>
-            <td>
-                <i class="bi bi-file-text" style="margin-right: 10px"></i> <a href="{{ basePath }}/{{ repoPath }}:{{ tag }}">{{ tag }}</a>
-                {{if deleteAllowed}}
-                <a href="{{ basePath }}/delete-tag?repoPath={{ repoPath }}&tag={{ tag }}" data-toggle="confirmation" class="btn btn-danger btn-xs pull-right" role="button">Delete</a>
-                {{end}}
-            </td>
-        </tr>
-        {{end}}
-    </tbody>
-</table>
+<div class="card shadow-sm mb-4">
+    <div class="card-header" style="background: linear-gradient(135deg, #65a30d 0%, #4d7c0f 100%); color: white;">
+        <h5 class="mb-0"><i class="bi bi-tags me-2"></i>Tags</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table id="datatable_tags" class="table table-hover table-striped mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Tag Name</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range _, tag := tags}}
+                    <tr>
+                        <td>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-tag text-success me-2"></i>
+                                    <a href="{{ basePath }}/{{ repoPath }}:{{ tag }}" class="text-decoration-none fw-semibold">{{ tag }}</a>
+                                </div>
+                                {{if deleteAllowed}}
+                                <a href="{{ basePath }}/delete-tag?repoPath={{ repoPath }}&tag={{ tag }}"
+                                   data-bs-toggle="confirmation"
+                                   class="btn btn-outline-danger btn-sm"
+                                   role="button">
+                                    <i class="bi bi-trash me-1"></i>Delete
+                                </a>
+                                {{end}}
+                            </div>
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 {{end}} {* end tags *}
 
 {{if eventsAllowed and isset(events) }}
-<h4>Recent Activity</h4>
-<table id="datatable_events" class="table table-striped table-bordered">
-    <thead bgcolor="#ddd">
-        <tr>
-            <th>Action</th>
-            <th>Image</th>
-            <th>IP Address</th>
-            <th>User</th>
-            <th>Time</th>
-        </tr>
-    </thead>
-    <tbody>
-        {{range _, e := events}}
-            <tr>
-                <td>{{ e.Action }}</td>
-                {{if hasPrefix(e.Tag,"sha256:") }}
-                <td title="{{ e.Tag }}">{{ e.Repository }}@{{ e.Tag[:19] }}...</td>
-                {{else}}
-                <td>{{ e.Repository }}:{{ e.Tag }}</td>
-                {{end}}
-                <td>{{ e.IP }}</td>
-                <td>{{ e.User }}</td>
-                <td>{{ e.Created|pretty_time }}</td>
-            </tr>
-        {{end}}
-    </tbody>
-</table>
+<div class="card shadow-sm mb-4">
+    <div class="card-header" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+        <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Activity</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table id="datatable_events" class="table table-hover table-striped mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Action</th>
+                        <th>Image</th>
+                        <th>IP Address</th>
+                        <th>User</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range _, e := events}}
+                        <tr>
+                            <td><span class="badge bg-primary">{{ e.Action }}</span></td>
+                            {{if hasPrefix(e.Tag,"sha256:") }}
+                            <td title="{{ e.Tag }}"><span class="small">{{ e.Repository }}@{{ e.Tag[:19] }}...</span></td>
+                            {{else}}
+                            <td><span class="small">{{ e.Repository }}:{{ e.Tag }}</span></td>
+                            {{end}}
+                            <td><span class="text-muted small">{{ e.IP }}</span></td>
+                            <td><span class="text-muted small">{{ e.User }}</span></td>
+                            <td><span class="text-muted small">{{ e.Created|pretty_time }}</span></td>
+                        </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 {{end}}
 
 {{end}}
