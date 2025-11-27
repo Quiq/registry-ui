@@ -1,5 +1,10 @@
 ## Changelog
 
+## 0.11.0 (2025-11-27)
+
+* Major UI rewrite.
+* Upgrade go version to 1.25.4 and all dependencies, alpine to 3.22.
+
 ## 0.10.4 (2025-06-11)
 
 * Include the default config file into the Docker image.
