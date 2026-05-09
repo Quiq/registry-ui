@@ -94,6 +94,9 @@ func (a *apiClient) viewCatalog(c echo.Context) error {
 		data.Set("tagsRefreshInfo", tagsRefreshInfo)
 		data.Set("tagCounts", a.client.SubRepoTagCounts(repoPath, repos))
 		data.Set("tags", tags)
+
+		pageSize := viper.GetInt("performance.catalog_page_size")
+		data.Set("repoItemPerPage", pageSize)
 		if repoPath != "" && (len(repos) > 0 || len(tags) > 0) {
 			// Do not show events in the root of catalog.
 			data.Set("events", a.eventListener.GetEvents(repoPath))

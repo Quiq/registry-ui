@@ -7,7 +7,7 @@
 <script type="text/javascript">
     $(document).ready(function() {
         var reposTable = $('#datatable_repos').DataTable({
-            "pageLength": 10,
+            "pageLength": {{ repoItemPerPage }},
             "stateSave": true,
             "dom": "<'row'<'col-sm-12'tr>><'row'<'col-sm-4'i><'col-sm-4 text-center'p><'col-sm-4 text-end'l>>",
             "language": {
