@@ -1,5 +1,9 @@
 ## Changelog
 
+## 0.12.1 (2026-10-12)
+
+* Upgrade go version to 1.27.2 and all dependencies, alpine to 3.24.
+
 ## 0.12.0 (2026-02-16)
 
 * Improved performance of tags loading by caching tags in memory via background job. Repos with many tags (thousands+) no longer cause timeouts when browsing.
