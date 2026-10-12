@@ -44,6 +44,7 @@ func main() {
 	}
 
 	// Read config file
+	viper.SetDefault("ui.default_page_size", 10)
 	viper.SetConfigName(strings.Split(filepath.Base(configFile), ".")[0])
 	viper.AddConfigPath(filepath.Dir(configFile))
 	viper.AddConfigPath(".")
