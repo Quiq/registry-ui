@@ -94,6 +94,9 @@ func (a *apiClient) viewCatalog(c echo.Context) error {
 		data.Set("tagsRefreshInfo", tagsRefreshInfo)
 		data.Set("tagCounts", a.client.SubRepoTagCounts(repoPath, repos))
 		data.Set("tags", tags)
+
+		pageSize := viper.GetInt("ui.default_page_size")
+		data.Set("pageSize", pageSize)
 		if repoPath != "" && (len(repos) > 0 || len(tags) > 0) {
 			// Do not show events in the root of catalog.
 			data.Set("events", a.eventListener.GetEvents(repoPath))
@@ -118,6 +121,8 @@ func (a *apiClient) deleteTag(c echo.Context) error {
 func (a *apiClient) viewEventLog(c echo.Context) error {
 	data := a.setUserPermissions(c)
 	data.Set("events", a.eventListener.GetEvents(""))
+	pageSize := viper.GetInt("ui.default_page_size")
+	data.Set("pageSize", pageSize)
 	return c.Render(http.StatusOK, "event_log.html", data)
 }
 
