@@ -92,3 +92,8 @@ purge_tags:
 debug:
   # Affects only templates.
   templates: false
+
+# Ui Options
+ui:
+  # change the default number of item per page (-1 mean all item)
+  default_page_size: 10

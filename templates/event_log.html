@@ -4,8 +4,26 @@
 {{block head()}}
 <script type="text/javascript">
     $(document).ready(function() {
+        var pageSize = {{ pageSize }};
+        var lengthMenu = [10, 25, 50, 100];
+
+        if (!lengthMenu.includes(pageSize)) {
+            lengthMenu.push(pageSize);
+        }
+        var sortedLengthMenu = lengthMenu.slice().sort((a, b) => {
+            // If 'a' is -1 and 'b' is NOT -1, move 'a' to the end
+            if (a === -1 && b !== -1) return 1;
+
+            // If 'b' is -1 and 'a' is NOT -1, move 'b' to the end
+            if (b === -1 && a !== -1) return -1;
+
+            // For everything else, use normal ascending order
+            return a - b;
+        });
+
         var table = $('#datatable').DataTable({
-            "pageLength": 10,
+            "pageLength": pageSize,
+            "lengthMenu": sortedLengthMenu,
             "order": [[ 4, 'desc' ]],
             "stateSave": false,
             "dom": "<'row'<'col-sm-12'tr>><'row'<'col-sm-4'i><'col-sm-4 text-center'p><'col-sm-4 text-end'l>>",
@@ -14,6 +32,9 @@
                 {search: $('input:checkbox[name="sha256_chk"]').val()},
             ],
             "language": {
+                "lengthLabels": {
+                    '-1': 'Show all'
+                },
                 "emptyTable": "No events.",
                 "info": "Showing _START_ to _END_ of _TOTAL_",
                 "infoFiltered": " (filtered from _MAX_)",
