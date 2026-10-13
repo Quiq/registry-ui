@@ -2,7 +2,10 @@ package registry
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"net/http"
 	"os"
 	"sort"
 	"strings"
@@ -58,35 +61,15 @@ type ImageInfo struct {
 
 // NewClient initialize Client.
 func NewClient() *Client {
-	var authOpt remote.Option
-	if viper.GetBool("registry.auth_with_keychain") {
-		authOpt = remote.WithAuthFromKeychain(authn.DefaultKeychain)
-	} else {
-		password := viper.GetString("registry.password")
-		if password == "" {
-			passwdFile := viper.GetString("registry.password_file")
-			if _, err := os.Stat(passwdFile); os.IsNotExist(err) {
-				panic(err)
-			}
-			data, err := os.ReadFile(passwdFile)
-			if err != nil {
-				panic(err)
-			}
-			password = strings.TrimSuffix(string(data[:]), "\n")
-		}
-
-		authOpt = remote.WithAuth(authn.FromConfig(authn.AuthConfig{
-			Username: viper.GetString("registry.username"), Password: password,
-		}))
-	}
+	authOpt := authOption()
+	transportOpt := transportOption()
 
 	pageSize := viper.GetInt("performance.catalog_page_size")
-	puller, _ := remote.NewPuller(authOpt, remote.WithUserAgent(userAgent), remote.WithPageSize(pageSize))
-	pusher, _ := remote.NewPusher(authOpt, remote.WithUserAgent(userAgent))
+	puller, _ := remote.NewPuller(authOpt, transportOpt, remote.WithUserAgent(userAgent), remote.WithPageSize(pageSize))
+	pusher, _ := remote.NewPusher(authOpt, transportOpt, remote.WithUserAgent(userAgent))
 
-	insecure := viper.GetBool("registry.insecure")
 	nameOptions := []name.Option{}
-	if insecure {
+	if viper.GetBool("registry.insecure") {
 		nameOptions = append(nameOptions, name.Insecure)
 	}
 
@@ -99,6 +82,69 @@ func NewClient() *Client {
 		nameOptions: nameOptions,
 	}
 	return c
+}
+
+// Creates a new Option to set the remote client's authenticator.
+func authOption() remote.Option {
+	if viper.GetBool("registry.auth_with_keychain") {
+		return remote.WithAuthFromKeychain(authn.DefaultKeychain)
+	}
+
+	username := viper.GetString("registry.username")
+	password := viper.GetString("registry.password")
+
+	if password == "" {
+		passwdFile := viper.GetString("registry.password_file")
+		if _, err := os.Stat(passwdFile); os.IsNotExist(err) {
+			panic(err)
+		}
+		data, err := os.ReadFile(passwdFile)
+		if err != nil {
+			panic(err)
+		}
+		password = strings.TrimSuffix(string(data[:]), "\n")
+	}
+
+	return remote.WithAuth(&authn.Basic{Username: username, Password: password})
+}
+
+// Creates a new Option to set the remote client's TLS configuration.
+func transportOption() remote.Option {
+	caCertPath := viper.GetString("registry.tls.ca")
+
+	if caCertPath == "" {
+		return remote.WithTransport(remote.DefaultTransport)
+	}
+
+	certPool, err := x509.SystemCertPool()
+	if err != nil {
+		panic(err)
+	}
+
+	caCertPEM, err := os.ReadFile(caCertPath)
+	if err != nil {
+		panic(err)
+	}
+
+	if ok := certPool.AppendCertsFromPEM(caCertPEM); !ok {
+		panic("Invalid certificate in CA PEM: " + caCertPath)
+	}
+
+	certPath := viper.GetString("registry.tls.cert")
+	keyPath := viper.GetString("registry.tls.key")
+
+	clientCertificate, err := tls.LoadX509KeyPair(certPath, keyPath)
+	if err != nil {
+		panic(err)
+	}
+
+	transport := remote.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = &tls.Config{
+		RootCAs:      certPool,
+		Certificates: []tls.Certificate{clientCertificate},
+	}
+
+	return remote.WithTransport(transport)
 }
 
 func (c *Client) StartBackgroundJobs() {

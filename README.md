@@ -50,6 +50,21 @@ To use a custom root CA certificate:
 
     -v /local/rootcacerts.crt:/etc/ssl/certs/ca-certificates.crt:ro
 
+To use self-signed certificates:
+
+    -v /local/path/to/certficates:/certs:ro \
+    -e REGISTRY_TLS_CA=/certs/ca.pem \
+    -e REGISTRY_TLS_CERT=/certs/cert.pem \
+    -e REGISTRY_TLS_KEY=/certs/key.pem
+
+Alternatively, you can configure this section in `config.yml`:
+
+    registry:
+      tls:
+        ca: /certs/ca.pem
+        cert: /certs/cert.pem
+        key: /certs/key.pem
+
 To persist the SQLite database for event data:
 
     -v /local/data:/opt/data

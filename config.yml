@@ -45,6 +45,16 @@ registry:
   # When enabled the above credentials will not be used.
   auth_with_keychain: false
 
+  # Registry TLS configuration.
+  # Adds support for self-signed certificates.
+  tls:
+    # The root CA certificate path, i.e.: '/certs/ca.pem' or '/certs/rootCA.crt'
+    ca: ''
+    # Client's certificate path, i.e.: '/certs/cert.pem' or '/certs/registry.crt'
+    cert: ''
+    # Client's private key path, i.e.: '/certs/key.pem' or '/certs/registry.key'
+    key: ''
+
 # UI access management.
 access_control:
   # Whether users can the event log. Otherwise, only admins listed below.
