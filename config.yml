@@ -93,7 +93,8 @@ debug:
   # Affects only templates.
   templates: false
 
-# Ui Options
+# UI options.
 ui:
-  # change the default number of item per page (-1 mean all item)
+  # Default number of rows per page in tables (-1 means show all).
+  # Note, tables on catalog pages remember the page length chosen by the user in the browser.
   default_page_size: 10

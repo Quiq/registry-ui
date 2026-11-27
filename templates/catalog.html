@@ -6,32 +6,12 @@
 <script type="text/javascript" src="{{ basePath }}/static/js/sorting_natural.js"></script>
 <script type="text/javascript">
     $(document).ready(function() {
-        var pageSize = {{ pageSize }};
-        var lengthMenu = [10, 25, 50, 100];
-
-        if (!lengthMenu.includes(pageSize)) {
-            lengthMenu.push(pageSize);
-        }
-        var sortedLengthMenu = lengthMenu.slice().sort((a, b) => {
-            // If 'a' is -1 and 'b' is NOT -1, move 'a' to the end
-            if (a === -1 && b !== -1) return 1;
-
-            // If 'b' is -1 and 'a' is NOT -1, move 'b' to the end
-            if (b === -1 && a !== -1) return -1;
-
-            // For everything else, use normal ascending order
-            return a - b;
-        });
-
         var reposTable = $('#datatable_repos').DataTable({
             "pageLength": pageSize,
-            "lengthMenu": sortedLengthMenu,
+            "lengthMenu": lengthMenu,
             "stateSave": true,
             "dom": "<'row'<'col-sm-12'tr>><'row'<'col-sm-4'i><'col-sm-4 text-center'p><'col-sm-4 text-end'l>>",
             "language": {
-                "lengthLabels": {
-                    '-1': 'Show all'
-                },
                 "emptyTable": "Catalog is being initializing...",
                 "info": "Showing _START_ to _END_ of _TOTAL_",
                 "infoFiltered": " (filtered from _MAX_)",
@@ -42,7 +22,7 @@
         var areTagsReady = {{ areTagsReady }};
         var tagsTable = $('#datatable_tags').DataTable({
             "pageLength": pageSize,
-            "lengthMenu": sortedLengthMenu,
+            "lengthMenu": lengthMenu,
             "order": [[ 0, 'desc' ]],
             "stateSave": true,
             "dom": "<'row'<'col-sm-12'tr>><'row'<'col-sm-4'i><'col-sm-4 text-center'p><'col-sm-4 text-end'l>>",
@@ -50,9 +30,6 @@
               { type: 'natural', targets: 0 }
             ],
             "language": {
-                "lengthLabels": {
-                    '-1': 'Show all'
-                },
                 "emptyTable": areTagsReady ? "No tags." : "Tags are being loaded in the background...",
                 "info": "Showing _START_ to _END_ of _TOTAL_",
                 "infoFiltered": " (filtered from _MAX_)",
