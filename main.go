@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"strings"
 
@@ -17,6 +18,7 @@ import (
 type apiClient struct {
 	client        *registry.Client
 	eventListener *events.EventListener
+	basePath      string
 }
 
 func main() {
@@ -78,22 +80,38 @@ func main() {
 	if basePath != "" {
 		basePath = "/" + basePath
 	}
+	a.basePath = basePath
 	e.Renderer = setupRenderer(basePath)
 
 	// Web routes.
 	e.File("/favicon.ico", "static/favicon.ico")
 	e.Static(basePath+"/static", "static")
 
-	p := e.Group(basePath)
+	// CSRF protection for the web UI: blocks cross-site state-changing requests using
+	// Sec-Fetch-Site and falls back to a double-submit token for browsers without it.
+	cookiePath := basePath
+	if cookiePath == "" {
+		cookiePath = "/"
+	}
+	csrf := middleware.CSRFWithConfig(middleware.CSRFConfig{
+		TokenLookup:    "form:" + csrfFormField,
+		ContextKey:     csrfContextKey,
+		CookieName:     "_registry_ui_csrf",
+		CookiePath:     cookiePath,
+		CookieHTTPOnly: true,
+		CookieSameSite: http.SameSiteStrictMode,
+	})
+
+	p := e.Group(basePath, csrf)
 	if basePath != "" {
-		e.GET(basePath, a.viewCatalog)
+		e.GET(basePath, a.viewCatalog, csrf)
 	}
 	p.GET("/", a.viewCatalog)
 	p.GET("/:repoPath", a.viewCatalog)
-	p.GET("/__event-log", a.viewEventLog)
-	p.GET("/__statistics", a.viewStatistics)
-	p.GET("/__options", a.viewOptions)
-	p.GET("/__delete-tag", a.deleteTag)
+	p.GET("/-/events", a.viewEventLog)
+	p.GET("/-/stats", a.viewStatistics)
+	p.GET("/-/options", a.viewOptions)
+	p.POST("/-/delete-tag", a.deleteTag)
 
 	// Protected event listener.
 	pp := e.Group("/event-receiver")

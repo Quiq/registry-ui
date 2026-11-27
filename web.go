@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -12,13 +13,32 @@ import (
 	"github.com/spf13/viper"
 )
 
-const usernameHTTPHeader = "X-WEBAUTH-USER"
+const (
+	usernameHTTPHeader = "X-WEBAUTH-USER"
+	csrfFormField      = "_csrf"
+	csrfContextKey     = "csrf"
+)
+
+// repoURL builds a safe local URL for the given repo path under the base path.
+// Each path segment is escaped so the result can't be turned into an external redirect.
+func (a *apiClient) repoURL(repoPath string) string {
+	segments := []string{}
+	for _, s := range strings.Split(repoPath, "/") {
+		if s != "" {
+			segments = append(segments, url.PathEscape(s))
+		}
+	}
+	return a.basePath + "/" + strings.Join(segments, "/")
+}
 
 func (a *apiClient) setUserPermissions(c echo.Context) jet.VarMap {
 	user := c.Request().Header.Get(usernameHTTPHeader)
 
 	data := jet.VarMap{}
 	data.Set("user", user)
+	csrfToken, _ := c.Get(csrfContextKey).(string)
+	data.Set("csrfToken", csrfToken)
+	data.Set("csrfField", csrfFormField)
 	admins := viper.GetStringSlice("access_control.admins")
 	data.Set("eventsAllowed", viper.GetBool("access_control.anyone_can_view_events") || registry.ItemInSlice(user, admins))
 	data.Set("deleteAllowed", viper.GetBool("access_control.anyone_can_delete_tags") || registry.ItemInSlice(user, admins))
@@ -62,8 +82,7 @@ func (a *apiClient) viewCatalog(c echo.Context) error {
 		// Show image info
 		imageInfo, err := a.client.GetImageInfo(repoPath)
 		if err != nil {
-			basePath := viper.GetString("uri_base_path")
-			return c.Redirect(http.StatusSeeOther, basePath)
+			return c.Redirect(http.StatusSeeOther, a.repoURL(""))
 		}
 		data.Set("ii", imageInfo)
 		return c.Render(http.StatusOK, "image_info.html", data)
@@ -103,15 +122,17 @@ func (a *apiClient) viewCatalog(c echo.Context) error {
 }
 
 func (a *apiClient) deleteTag(c echo.Context) error {
-	repoPath := c.QueryParam("repoPath")
-	tag := c.QueryParam("tag")
+	repoPath := strings.Trim(c.FormValue("repoPath"), "/")
+	tag := c.FormValue("tag")
 
 	data := a.setUserPermissions(c)
-	if data["deleteAllowed"].Bool() {
+	if !data["deleteAllowed"].Bool() {
+		return echo.NewHTTPError(http.StatusForbidden, "tag deletion is not allowed")
+	}
+	if repoPath != "" && tag != "" {
 		a.client.DeleteTag(repoPath, tag)
 	}
-	basePath := viper.GetString("uri_base_path")
-	return c.Redirect(http.StatusSeeOther, fmt.Sprintf("%s%s", basePath, repoPath))
+	return c.Redirect(http.StatusSeeOther, a.repoURL(repoPath))
 }
 
 // viewLog view events from sqlite.
