@@ -99,7 +99,7 @@
 
 {{if len(repos)>0 || !isCatalogReady}}
 <div class="card shadow-sm mb-4">
-    <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+    <div class="card-header ch-purple">
         <h5 class="mb-0"><i class="bi bi-folder2 me-2"></i>Repositories</h5>
     </div>
     <div class="card-body p-0">
@@ -133,7 +133,7 @@
 
 {{if showTags}}
 <div class="card shadow-sm mb-4">
-    <div class="card-header" style="background: linear-gradient(135deg, #65a30d 0%, #4d7c0f 100%); color: white;">
+    <div class="card-header ch-green">
         <h5 class="mb-0"><i class="bi bi-tags me-2"></i>Tags
             {{if tagsRefreshInfo != ""}}
             <i class="bi bi-info-circle ms-2" style="font-size: 0.8rem; opacity: 0.8;" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="{{ tagsRefreshInfo }}"></i>
@@ -182,7 +182,7 @@
 
 {{if eventsAllowed and isset(events) }}
 <div class="card shadow-sm mb-4">
-    <div class="card-header" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+    <div class="card-header ch-blue">
         <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Activity</h5>
     </div>
     <div class="card-body p-0">

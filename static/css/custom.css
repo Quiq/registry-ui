@@ -251,3 +251,36 @@ div.dt-container .dt-paging .dt-paging-button:hover:not(.disabled):not(.current)
 [data-bs-theme="dark"] .table-striped.table-bordered td:not(:first-child) {
     color: #dee2e6 !important;
 }
+
+/* Card header colors: one hue per section, tuned for readable white text */
+.card-header.ch-purple,
+.card-header.ch-green,
+.card-header.ch-blue,
+.card-header.ch-pink {
+    color: #fff;
+}
+
+.card-header.ch-purple { background: linear-gradient(135deg, #5a6fd8 0%, #6c47a0 100%); }
+.card-header.ch-green  { background: linear-gradient(135deg, #4f8a10 0%, #3f6b0d 100%); }
+.card-header.ch-blue   { background: linear-gradient(135deg, #2f74d0 0%, #0e87a8 100%); }
+.card-header.ch-pink   { background: linear-gradient(135deg, #b0479a 0%, #c93a55 100%); }
+
+.card-header.ch-mint {
+    background: linear-gradient(135deg, #7fdcd6 0%, #f9b8cd 100%);
+    color: #1f2937;
+}
+
+[data-bs-theme="dark"] .card-header.ch-mint {
+    background: linear-gradient(135deg, #1a7a75 0%, #8f3b5e 100%);
+    color: #fff;
+}
+
+/* Neutral slate for pages with many repeated sections (Options) */
+.card-header.ch-slate {
+    background: linear-gradient(135deg, #52627d 0%, #334158 100%);
+    color: #fff;
+}
+
+[data-bs-theme="dark"] .card-header.ch-slate {
+    background: linear-gradient(135deg, #5b6b87 0%, #3c4a63 100%);
+}

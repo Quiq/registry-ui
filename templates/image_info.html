@@ -31,7 +31,7 @@
 </div>
 
 <div class="card shadow-sm mb-4">
-    <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+    <div class="card-header ch-purple">
         <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Summary</h5>
     </div>
     <div class="card-body p-0">
@@ -89,8 +89,8 @@
 </div>
 
 <div class="card shadow-sm mb-4">
-    <div class="card-header" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
-        <h5 class="mb-0" style="color: #333;"><i class="bi bi-file-code me-2"></i>{{if ii.IsImage}}Manifest{{else}}Index Manifest{{end}}</h5>
+    <div class="card-header ch-mint">
+        <h5 class="mb-0"><i class="bi bi-file-code me-2"></i>{{if ii.IsImage}}Manifest{{else}}Index Manifest{{end}}</h5>
     </div>
     <div class="card-body p-0">
         {{ yield json_to_table() ii.Manifest }}
@@ -99,8 +99,8 @@
 
 {{if ii.IsImage}}
 <div class="card shadow-sm mb-4">
-    <div class="card-header" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
-        <h5 class="mb-0" style="color: #333;"><i class="bi bi-gear me-2"></i>Config File</h5>
+    <div class="card-header ch-mint">
+        <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Config File</h5>
     </div>
     <div class="card-body p-0">
         {{ yield json_to_table() ii.ConfigFile }}
