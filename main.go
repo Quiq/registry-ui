@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/subtle"
 	"flag"
 	"fmt"
 	"net/http"
@@ -73,6 +74,13 @@ func main() {
 	// e.Use(middleware.Logger())
 	e.Use(loggingMiddleware())
 	e.Use(recoverMiddleware())
+	// Security headers: forbid framing (clickjacking) and MIME sniffing.
+	e.Use(middleware.SecureWithConfig(middleware.SecureConfig{
+		XFrameOptions:         "DENY",
+		ContentTypeNosniff:    "nosniff",
+		ContentSecurityPolicy: "frame-ancestors 'none'",
+		ReferrerPolicy:        "same-origin",
+	}))
 
 	basePath := viper.GetString("uri_base_path")
 	// Normalize base path.
@@ -115,9 +123,11 @@ func main() {
 
 	// Protected event listener.
 	pp := e.Group("/event-receiver")
+	pp.Use(middleware.BodyLimit("1M"))
 	pp.Use(middleware.KeyAuthWithConfig(middleware.KeyAuthConfig{
 		Validator: middleware.KeyAuthValidator(func(token string, c echo.Context) (bool, error) {
-			return token == viper.GetString("event_listener.bearer_token"), nil
+			expected := viper.GetString("event_listener.bearer_token")
+			return expected != "" && subtle.ConstantTimeCompare([]byte(token), []byte(expected)) == 1, nil
 		}),
 	}))
 	pp.POST("", a.receiveEvents)

@@ -7,6 +7,9 @@
 * **BREAKING** Internal routes moved from `/__` to `/-/` namespace: `/__event-log` → `/-/events`, `/__statistics` → `/-/stats`, `/__options` → `/-/options`, `/__delete-tag` → `/-/delete-tag`. Update any reverse proxy rules or bookmarks accordingly.
 * **BREAKING** `/-/delete-tag` no longer accepts GET requests. Scripts calling it directly must switch to POST and pass the CSRF token or send `Sec-Fetch-Site: same-origin`.
 * Users without delete permission now get 403 from `/-/delete-tag` instead of a silent redirect.
+* **SECURITY** Added `X-Frame-Options: DENY` and `Content-Security-Policy: frame-ancestors 'none'` headers to prevent clickjacking, plus `X-Content-Type-Options` and `Referrer-Policy`.
+* Event receiver: constant-time bearer token comparison and a 1 MB request body limit.
+* Use parameterized SQL query for repository events, and match repo names containing `_` or `%` literally.
 * Upgrade go version to 1.27.4 and all dependencies.
 
 ## 0.12.1 (2026-10-12)
