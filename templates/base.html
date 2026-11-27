@@ -10,6 +10,32 @@
         <link rel="stylesheet" type="text/css" href="{{ basePath }}/static/css/datatables.min.css"/>
         <link rel="stylesheet" type="text/css" href="{{ basePath }}/static/css/custom.css?v={{version}}">
         <script type="text/javascript" src="{{ basePath }}/static/js/datatables.min.js"></script>
+        <script type="text/javascript">
+            // Default DataTables page length from `ui.default_page_size` (-1 = show all).
+            var pageSize = {{ pageSize }};
+            var lengthMenu = [10, 25, 50, 100];
+            if (pageSize > 0 && !lengthMenu.includes(pageSize)) {
+                lengthMenu.push(pageSize);
+                lengthMenu.sort(function(a, b) { return a - b; });
+            }
+            if (pageSize === -1) {
+                lengthMenu.push({label: 'Show all', value: -1});
+            }
+
+            // Saved table state remembers the configured page size it was saved with.
+            // If `ui.default_page_size` has changed since, drop the saved page length.
+            function dtStateSaveParams(settings, data) {
+                data.configPageSize = pageSize;
+            }
+            $.extend($.fn.dataTable.defaults, {
+                stateSaveParams: dtStateSaveParams,
+                stateLoadParams: function(settings, data) {
+                    if (data.configPageSize !== pageSize) {
+                        delete data.length;
+                    }
+                }
+            });
+        </script>
         {{yield head()}}
     </head>
     <body class="d-flex flex-column min-vh-100">

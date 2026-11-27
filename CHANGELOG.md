@@ -1,15 +1,16 @@
 ## Changelog
 
-## 0.12.2 (2026-11-27)
+## 0.13.0 (2026-11-27)
 
 * **SECURITY** Fixed CSRF in tag deletion: a privileged user visiting a malicious page could have tags deleted without their consent. Tag deletion now requires POST and is protected by CSRF checks (`Sec-Fetch-Site` header validation with a token fallback for older browsers).
 * **SECURITY** Fixed an open redirect after tag deletion, where a crafted `repoPath` could send users to an external site.
+* **SECURITY** Added `X-Frame-Options: DENY` and `Content-Security-Policy: frame-ancestors 'none'` headers to prevent clickjacking, plus `X-Content-Type-Options` and `Referrer-Policy`.
 * **BREAKING** Internal routes moved from `/__` to `/-/` namespace: `/__event-log` → `/-/events`, `/__statistics` → `/-/stats`, `/__options` → `/-/options`, `/__delete-tag` → `/-/delete-tag`. Update any reverse proxy rules or bookmarks accordingly.
 * **BREAKING** `/-/delete-tag` no longer accepts GET requests. Scripts calling it directly must switch to POST and pass the CSRF token or send `Sec-Fetch-Site: same-origin`.
 * Users without delete permission now get 403 from `/-/delete-tag` instead of a silent redirect.
-* **SECURITY** Added `X-Frame-Options: DENY` and `Content-Security-Policy: frame-ancestors 'none'` headers to prevent clickjacking, plus `X-Content-Type-Options` and `Referrer-Policy`.
 * Event receiver: constant-time bearer token comparison and a 1 MB request body limit.
 * Use parameterized SQL query for repository events, and match repo names containing `_` or `%` literally.
+* Added `ui.default_page_size` config option to set the default number of rows per page in tables, `-1` shows all (#106, by RouxAntoine).
 * Upgrade go version to 1.27.4 and all dependencies.
 
 ## 0.12.1 (2026-10-12)

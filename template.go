@@ -44,6 +44,11 @@ func setupRenderer(basePath string) *Template {
 	view.AddGlobal("version", version)
 	view.AddGlobal("basePath", basePath)
 	view.AddGlobal("registryHost", viper.GetString("registry.hostname"))
+	pageSize := viper.GetInt("ui.default_page_size")
+	if pageSize < 1 && pageSize != -1 {
+		pageSize = 10
+	}
+	view.AddGlobal("pageSize", pageSize)
 	view.AddGlobal("pretty_size", func(val interface{}) string {
 		var s float64
 		switch i := val.(type) {

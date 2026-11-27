@@ -113,6 +113,7 @@ func (a *apiClient) viewCatalog(c echo.Context) error {
 		data.Set("tagsRefreshInfo", tagsRefreshInfo)
 		data.Set("tagCounts", a.client.SubRepoTagCounts(repoPath, repos))
 		data.Set("tags", tags)
+
 		if repoPath != "" && (len(repos) > 0 || len(tags) > 0) {
 			// Do not show events in the root of catalog.
 			data.Set("events", a.eventListener.GetEvents(repoPath))
