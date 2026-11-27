@@ -157,11 +157,14 @@ func (e *EventListener) GetEvents(repository string) []EventRow {
 	defer db.Close()
 
 	query := "SELECT * FROM events ORDER BY id DESC LIMIT 1000"
+	args := []interface{}{}
 	if repository != "" {
-		query = fmt.Sprintf("SELECT * FROM events WHERE repository='%s' OR repository LIKE '%s/%%' ORDER BY id DESC LIMIT 5",
-			repository, repository)
+		// Escape LIKE wildcards so repo names with "_" or "%" match literally.
+		likeEscaper := strings.NewReplacer("!", "!!", "%", "!%", "_", "!_")
+		query = "SELECT * FROM events WHERE repository=? OR repository LIKE ? ESCAPE '!' ORDER BY id DESC LIMIT 5"
+		args = append(args, repository, likeEscaper.Replace(repository)+"/%")
 	}
-	rows, err := db.Query(query)
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		e.logger.Error("Error selecting from table: ", err)
 		return events
