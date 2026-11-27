@@ -21,6 +21,20 @@
             if (pageSize === -1) {
                 lengthMenu.push({label: 'Show all', value: -1});
             }
+
+            // Saved table state remembers the configured page size it was saved with.
+            // If `ui.default_page_size` has changed since, drop the saved page length.
+            function dtStateSaveParams(settings, data) {
+                data.configPageSize = pageSize;
+            }
+            $.extend($.fn.dataTable.defaults, {
+                stateSaveParams: dtStateSaveParams,
+                stateLoadParams: function(settings, data) {
+                    if (data.configPageSize !== pageSize) {
+                        delete data.length;
+                    }
+                }
+            });
         </script>
         {{yield head()}}
     </head>
