@@ -1,6 +1,6 @@
 ## Changelog
 
-## 0.13 (2026-11-27)
+## 0.13.0 (2026-11-27)
 
 * **SECURITY** Fixed CSRF in tag deletion: a privileged user visiting a malicious page could have tags deleted without their consent. Tag deletion now requires POST and is protected by CSRF checks (`Sec-Fetch-Site` header validation with a token fallback for older browsers).
 * **SECURITY** Fixed an open redirect after tag deletion, where a crafted `repoPath` could send users to an external site.
