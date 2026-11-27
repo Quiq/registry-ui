@@ -1,4 +1,4 @@
-FROM golang:1.27.2-alpine3.24 AS builder
+FROM golang:1.27.4-alpine3.24 AS builder
 
 RUN apk update && \
     apk add ca-certificates git bash gcc musl-dev

@@ -156,12 +156,16 @@
                                     <a href="{{ basePath }}/{{ repoPath }}:{{ tag }}" class="text-decoration-none fw-semibold">{{ tag }}</a>
                                 </div>
                                 {{if deleteAllowed}}
-                                <a href="{{ basePath }}/__delete-tag?repoPath={{ repoPath }}&tag={{ tag }}"
-                                   data-bs-toggle="confirmation"
-                                   class="btn btn-outline-danger btn-sm"
-                                   role="button">
-                                    <i class="bi bi-trash me-1"></i>Delete
-                                </a>
+                                <form method="post" action="{{ basePath }}/-/delete-tag" class="d-inline m-0">
+                                    <input type="hidden" name="{{ csrfField }}" value="{{ csrfToken }}">
+                                    <input type="hidden" name="repoPath" value="{{ repoPath }}">
+                                    <input type="hidden" name="tag" value="{{ tag }}">
+                                    <button type="submit"
+                                            data-bs-toggle="confirmation"
+                                            class="btn btn-outline-danger btn-sm">
+                                        <i class="bi bi-trash me-1"></i>Delete
+                                    </button>
+                                </form>
                                 {{end}}
                             </div>
                         </td>

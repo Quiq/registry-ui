@@ -66,8 +66,11 @@
             popoverInstance.dispose();
             popoverInstance = null;
           }
-          // Navigate to the href
-          if (href) {
+          // Submit the enclosing form, or navigate to the href
+          var form = $element.closest('form')[0];
+          if (form) {
+            form.submit();
+          } else if (href) {
             window.location.href = href;
           }
         });
